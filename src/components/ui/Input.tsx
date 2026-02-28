@@ -1,6 +1,6 @@
 import React from 'react';
-import { TextInput } from 'react-native';
+import { TextInput, TextInputProps } from 'react-native';
 
-export default function Input(props: any) {
+export default function Input(props: TextInputProps) {
     return <TextInput {...props} />;
 }

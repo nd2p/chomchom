@@ -1,8 +1,5 @@
-import Home from './src/app/(tabs)/home';
+import AppNavigator from './src/navigation/AppNavigator';
 
 export default function App() {
-  return (
-    <Home />
-  );
+  return <AppNavigator />;
 }
-

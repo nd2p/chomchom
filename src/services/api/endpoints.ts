@@ -1,3 +1,3 @@
 export const endpoints = {
-  stories: "/stories",
+  stories: '/stories',
 };

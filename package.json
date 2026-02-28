@@ -1,24 +1,50 @@
 {
   "name": "chomchom",
   "version": "1.0.0",
+  "type": "module",
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
+    "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,md}\"",
+    "prepare": "husky"
   },
   "dependencies": {
+    "@react-navigation/native": "^7.1.31",
+    "@react-navigation/stack": "^7.8.2",
     "expo": "~54.0.32",
+    "expo-linking": "^55.0.7",
     "expo-router": "~6.0.22",
     "expo-status-bar": "~3.0.9",
     "react": "19.1.0",
     "react-native": "0.81.5",
+    "react-native-gesture-handler": "^2.30.0",
+    "react-native-pager-view": "^8.0.0",
     "react-native-safe-area-context": "~5.6.0",
-    "react-native-screens": "~4.16.0"
+    "react-native-screens": "~4.16.0",
+    "react-native-tab-view": "^4.2.2",
+    "react-native-vector-icons": "^10.3.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.3",
     "@types/react": "~19.1.0",
+    "@types/react-native-vector-icons": "^6.4.18",
+    "@types/react-navigation": "^3.0.8",
+    "@typescript-eslint/eslint-plugin": "^8.56.1",
+    "@typescript-eslint/parser": "^8.56.1",
+    "eslint": "^9.39.3",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-native": "^5.0.0",
+    "globals": "^17.3.0",
+    "prettier": "^3.8.1",
     "typescript": "~5.9.2"
   },
   "private": true

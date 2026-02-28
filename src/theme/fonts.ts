@@ -1,1 +1,1 @@
-export const fonts = { regular: "System" };
+export const fonts = { regular: 'System' };

@@ -1,1 +1,1 @@
-export const useThemeStore = () => ({ theme: "light" as "light" | "dark" });
+export const useThemeStore = () => ({ theme: 'light' as 'light' | 'dark' });

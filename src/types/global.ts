@@ -1,1 +1,1 @@
-export type AppState = {};
+export type AppState = Record<string, never>;
