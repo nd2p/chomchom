@@ -17,10 +17,10 @@ const styles = StyleSheet.create({
   },
 });
 
-export default function Profile() {
+export default function Bookmarks() {
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>👤 Profile Tab</Text>
+      <Text style={styles.text}>📑 Bookmarks Tab</Text>
     </View>
   );
 }

@@ -2,9 +2,9 @@ import React from 'react';
 import { View, Text } from 'react-native';
 
 export default function Index() {
-    return (
-        <View>
-            <Text>App Index</Text>
-        </View>
-    );
+  return (
+    <View>
+      <Text>App Index</Text>
+    </View>
+  );
 }

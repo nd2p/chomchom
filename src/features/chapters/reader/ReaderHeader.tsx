@@ -2,9 +2,9 @@ import React from 'react';
 import { View, Text } from 'react-native';
 
 export default function ReaderHeader({ title }: { title?: string }) {
-    return (
-        <View>
-            <Text>{title ?? 'Chapter'}</Text>
-        </View>
-    );
+  return (
+    <View>
+      <Text>{title ?? 'Chapter'}</Text>
+    </View>
+  );
 }
