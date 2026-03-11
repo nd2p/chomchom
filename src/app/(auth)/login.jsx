@@ -1,0 +1,415 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  ActivityIndicator,
+  Alert,
+  TextInput,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Link } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../features/auth/hooks';
+import { authApi } from '../../features/auth/api';
+import { colors } from '../../theme/colors';
+
+export default function LoginScreen() {
+  const { login } = useAuth();
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  const busy = isLoading || isGoogleLoading;
+
+  function validate() {
+    const next = {};
+    if (!email.trim()) next.email = 'Email không được để trống';
+    else if (!/^\S+@\S+\.\S+$/.test(email)) next.email = 'Email không hợp lệ';
+    if (!password) next.password = 'Mật khẩu không được để trống';
+    else if (password.length < 6) next.password = 'Mật khẩu ít nhất 6 ký tự';
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  }
+
+  async function handleLogin() {
+    if (!validate()) return;
+    try {
+      setIsLoading(true);
+      const res = await authApi.login({ email, password });
+      login(res.user, res.token);
+    } catch {
+      Alert.alert('Lỗi', 'Đăng nhập thất bại. Vui lòng thử lại.');
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleGoogleLogin() {
+    try {
+      setIsGoogleLoading(true);
+      const res = await authApi.loginWithGoogle();
+      login(res.user, res.token);
+    } catch {
+      Alert.alert('Lỗi', 'Đăng nhập Google thất bại. Vui lòng thử lại.');
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  }
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <StatusBar style="light" />
+
+      {/* Branding header */}
+      <View style={styles.header}>
+        <View style={styles.logoCircle}>
+          <Text style={styles.logoLetter}>C</Text>
+        </View>
+        <Text style={styles.appName}>ChomChom</Text>
+        <Text style={styles.tagline}>Kho truyện không giới hạn</Text>
+      </View>
+
+      {/* White card */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.card}>
+            <Text style={styles.title}>Chào mừng trở lại!</Text>
+            <Text style={styles.subtitle}>Đăng nhập để tiếp tục đọc truyện</Text>
+
+            {/* Email */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Email</Text>
+              <View style={[styles.inputWrapper, errors.email ? styles.inputError : undefined]}>
+                <Ionicons
+                  name="mail-outline"
+                  size={20}
+                  color={errors.email ? colors.error : colors.textMuted}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="example@email.com"
+                  placeholderTextColor={colors.textMuted}
+                  value={email}
+                  onChangeText={(t) => {
+                    setEmail(t);
+                    setErrors((e) => ({ ...e, email: undefined }));
+                  }}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!busy}
+                />
+              </View>
+              {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
+            </View>
+
+            {/* Password */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Mật khẩu</Text>
+              <View style={[styles.inputWrapper, errors.password ? styles.inputError : undefined]}>
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={20}
+                  color={errors.password ? colors.error : colors.textMuted}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="••••••••"
+                  placeholderTextColor={colors.textMuted}
+                  value={password}
+                  onChangeText={(t) => {
+                    setPassword(t);
+                    setErrors((e) => ({ ...e, password: undefined }));
+                  }}
+                  secureTextEntry={!showPassword}
+                  editable={!busy}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword((v) => !v)}
+                  style={styles.eyeButton}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons
+                    name={showPassword ? 'eye-outline' : 'eye-off-outline'}
+                    size={20}
+                    color={colors.textMuted}
+                  />
+                </TouchableOpacity>
+              </View>
+              {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
+            </View>
+
+            {/* Forgot password */}
+            <TouchableOpacity style={styles.forgotContainer} disabled={busy}>
+              <Text style={styles.forgotText}>Quên mật khẩu?</Text>
+            </TouchableOpacity>
+
+            {/* Login button */}
+            <TouchableOpacity
+              style={[styles.primaryButton, busy && styles.buttonDisabled]}
+              onPress={handleLogin}
+              disabled={busy}
+              activeOpacity={0.85}
+            >
+              {isLoading ? (
+                <ActivityIndicator color={colors.white} />
+              ) : (
+                <Text style={styles.primaryButtonText}>Đăng nhập</Text>
+              )}
+            </TouchableOpacity>
+
+            {/* Divider */}
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>hoặc</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Google button */}
+            <TouchableOpacity
+              style={[styles.googleButton, busy && styles.buttonDisabled]}
+              onPress={handleGoogleLogin}
+              disabled={busy}
+              activeOpacity={0.85}
+            >
+              {isGoogleLoading ? (
+                <ActivityIndicator color={colors.google} />
+              ) : (
+                <>
+                  <View style={styles.googleBadge}>
+                    <Text style={styles.googleLetter}>G</Text>
+                  </View>
+                  <Text style={styles.googleButtonText}>Tiếp tục với Google</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            {/* Register link */}
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Chưa có tài khoản? </Text>
+              <Link href="/(auth)/register" asChild>
+                <TouchableOpacity disabled={busy}>
+                  <Text style={styles.footerLink}>Đăng ký ngay</Text>
+                </TouchableOpacity>
+              </Link>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.primary,
+  },
+  header: {
+    alignItems: 'center',
+    paddingTop: 20,
+    paddingBottom: 36,
+  },
+  logoCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.35)',
+  },
+  logoLetter: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: colors.white,
+  },
+  appName: {
+    fontSize: 30,
+    fontWeight: '800',
+    color: colors.white,
+    letterSpacing: 1,
+  },
+  tagline: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.75)',
+    marginTop: 4,
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  card: {
+    flex: 1,
+    backgroundColor: colors.background,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingHorizontal: 28,
+    paddingTop: 32,
+    paddingBottom: 40,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 6,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: 28,
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 8,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    paddingHorizontal: 14,
+    height: 52,
+  },
+  inputError: {
+    borderColor: colors.error,
+    backgroundColor: colors.errorLight,
+  },
+  inputIcon: {
+    marginRight: 10,
+  },
+  input: {
+    flex: 1,
+    fontSize: 15,
+    color: colors.text,
+    paddingVertical: 0,
+  },
+  eyeButton: {
+    padding: 4,
+  },
+  errorText: {
+    fontSize: 12,
+    color: colors.error,
+    marginTop: 5,
+    marginLeft: 2,
+  },
+  forgotContainer: {
+    alignSelf: 'flex-end',
+    marginTop: -4,
+    marginBottom: 24,
+  },
+  forgotText: {
+    fontSize: 13,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  primaryButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 14,
+    height: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  buttonDisabled: {
+    opacity: 0.65,
+  },
+  primaryButtonText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 22,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  dividerText: {
+    fontSize: 13,
+    color: colors.textMuted,
+    marginHorizontal: 14,
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.white,
+    borderRadius: 14,
+    height: 52,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+  },
+  googleBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: colors.google,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  googleLetter: {
+    color: colors.white,
+    fontWeight: '900',
+    fontSize: 14,
+  },
+  googleButtonText: {
+    fontSize: 15,
+    color: colors.text,
+    fontWeight: '600',
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 28,
+  },
+  footerText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  footerLink: {
+    fontSize: 14,
+    color: colors.primary,
+    fontWeight: '700',
+  },
+});
