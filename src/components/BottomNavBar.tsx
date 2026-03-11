@@ -50,7 +50,7 @@ const BottomNavBar = ({ navigation, active }: BottomNavBarProps) => {
 const styles = StyleSheet.create({
     wrapper: {
         position: 'absolute',
-        bottom: 24,
+        bottom: 10,
         left: 0,
         right: 0,
         alignItems: 'center',

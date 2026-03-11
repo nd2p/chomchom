@@ -7,7 +7,7 @@ interface StoryCardProps {
   title: string;
   author: string;
   cover: string;
-  rating?: number;
+  views?: number;
   chapters?: number;
   onPress?: () => void;
   variant?: 'horizontal' | 'vertical';
@@ -17,7 +17,7 @@ const StoryCard: React.FC<StoryCardProps> = ({
   title,
   author,
   cover,
-  rating,
+  views,
   chapters,
   onPress,
   variant = 'vertical',
@@ -34,8 +34,8 @@ const StoryCard: React.FC<StoryCardProps> = ({
         <Text style={styles.author} numberOfLines={1}>
           {author}
         </Text>
-        {chapters && <Text style={styles.meta}>{chapters} chapters</Text>}
-        {rating && <Text style={styles.rating}>⭐ {rating.toFixed(1)}</Text>}
+        {chapters !== undefined && <Text style={styles.meta}>{chapters} chapters</Text>}
+        {views !== undefined && <Text style={styles.view}>{views.toLocaleString()} views</Text>}
       </View>
     </TouchableOpacity>
   );
@@ -73,7 +73,7 @@ const verticalStyles = StyleSheet.create({
     marginTop: 4,
     fontFamily: fonts.regular,
   },
-  rating: {
+  view: {
     fontSize: 12,
     color: '#f59e0b',
     marginTop: 4,
@@ -116,7 +116,7 @@ const horizontalStyles = StyleSheet.create({
     color: '#999',
     fontFamily: fonts.regular,
   },
-  rating: {
+  view: {
     fontSize: 12,
     color: '#f59e0b',
     marginTop: 4,
