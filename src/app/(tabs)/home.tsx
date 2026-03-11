@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, FlatList } from 'react-native';
 import { colors } from '../../theme/colors';
 import SearchBar from '../../components/ui/SearchBar';
 import StoryCard from '../../components/ui/StoryCard';
-import { recommendedStories, recentlyReadStories, popularStories } from '../../utils/mockStories';
+import { recentlyReadStories, popularStories } from '../../utils/mockStories';
+import { extractAuthorFromParentheses } from '../../utils/format';
+import { getRecommendedComics } from '../../services/api/comics';
+import { apiBaseURL } from '../../services/api/axios';
 
 const styles = StyleSheet.create({
   container: {
@@ -13,7 +16,6 @@ const styles = StyleSheet.create({
   searchBarWrapper: {
     backgroundColor: '#ffffff',
     zIndex: 10,
-    paddingTop: 10,
   },
   scrollContent: {
     paddingHorizontal: 16,
@@ -41,6 +43,40 @@ const styles = StyleSheet.create({
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [recommendedComics, setRecommendedComics] = useState<any[]>([]);
+
+  const getComicKey = (item: any, index: number) => {
+    return String(item?.id ?? item?._id ?? item?.slug ?? item?.title ?? `comic-${index}`);
+  };
+
+  useEffect(() => {
+    const fetchComics = async () => {
+      try {
+        const res = await getRecommendedComics(1);
+        const comics = res?.comics;
+        const normalizedComics = Array.isArray(comics)
+          ? comics.map((comic) => ({
+            id: comic?._id,
+            title: comic?.title || 'N/A',
+            author: extractAuthorFromParentheses(comic?.title) || 'N/A',
+            cover: comic?.coverImage,
+            chapters: comic?.totalChapters,
+            views: comic?.views,
+          }))
+          : [];
+
+        setRecommendedComics(normalizedComics);
+      } catch (error) {
+        console.log('Failed to fetch recommended comics', {
+          baseURL: apiBaseURL,
+          error,
+        });
+      }
+    };
+
+    fetchComics();
+  }, []);
+
 
   const handleStoryPress = (storyId: string) => {
     console.log('Story pressed:', storyId);
@@ -63,16 +99,16 @@ export default function Home() {
         <Text style={styles.sectionTitle}>Được Đề Xuất</Text>
         <FlatList
           horizontal
-          data={recommendedStories}
-          keyExtractor={(item) => item.id}
+          data={recommendedComics}
+          keyExtractor={getComicKey}
           renderItem={({ item }) => (
             <StoryCard
               title={item.title}
               author={item.author}
               cover={item.cover}
               chapters={item.chapters}
-              rating={item.rating}
-              onPress={() => handleStoryPress(item.id)}
+              views={item.views}
+              onPress={() => handleStoryPress(String(item.id))}
               variant="vertical"
             />
           )}
@@ -93,7 +129,7 @@ export default function Home() {
               author={item.author}
               cover={item.cover}
               chapters={item.chapters}
-              rating={item.rating}
+              views={item.views}
               onPress={() => handleStoryPress(item.id)}
               variant="vertical"
             />
@@ -115,7 +151,6 @@ export default function Home() {
                 author={item.author}
                 cover={item.cover}
                 chapters={item.chapters}
-                rating={item.rating}
                 onPress={() => handleStoryPress(item.id)}
                 variant="horizontal"
               />

@@ -46,7 +46,7 @@ const AppNavigator = () => {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: 24 }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <TabView
         navigationState={{ index, routes }}
         renderScene={renderScene}
