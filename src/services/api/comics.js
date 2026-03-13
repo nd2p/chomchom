@@ -15,3 +15,8 @@ export async function getReadingHistory(page = 1) {
 
   return response.data;
 }
+
+export async function getComicDetails(comicId) {
+  const response = await axiosInstance.get(`/api/comics/${comicId}`);
+  return response.data;
+}
