@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, FlatList } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import SearchBar from '../../components/ui/SearchBar';
 import StoryCard from '../../components/ui/StoryCard';
@@ -49,6 +50,7 @@ const styles = StyleSheet.create({
 });
 
 export default function Home() {
+  const navigation = useNavigation();
   const { isAuthenticated } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [recommendedComics, setRecommendedComics] = useState([]);
@@ -117,7 +119,7 @@ export default function Home() {
   }, [isAuthenticated]);
 
   const handleStoryPress = (storyId) => {
-    console.log('Story pressed:', storyId);
+    navigation.navigate('StoryDetail', { id: storyId });
   };
 
   return (
