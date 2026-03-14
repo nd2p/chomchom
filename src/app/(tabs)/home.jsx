@@ -1,12 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, FlatList } from 'react-native';
+import { View, Text, StyleSheet, FlatList } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import SearchBar from '../../components/ui/SearchBar';
-import StoryCard from '../../components/ui/StoryCard';
-import { popularStories } from '../../utils/mockStories';
-import { extractAuthorFromParentheses } from '../../utils/format';
-import { getRecommendedComics, getReadingHistory } from '../../services/api/comics';
+import StoryCard from '../../features/comics/components/StoryCard';
+import { getRecommendedComics, getReadingHistory, getPopularComics } from '../../features/comics/api';
 import { apiBaseURL } from '../../services/api/axios';
 import { useAuth } from '../../features/auth/hooks';
 
@@ -20,7 +18,6 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   scrollContent: {
-    paddingHorizontal: 16,
     paddingBottom: 80,
   },
   sectionTitle: {
@@ -29,23 +26,23 @@ const styles = StyleSheet.create({
     color: colors.primary,
     marginBottom: 12,
     marginTop: 20,
+    paddingHorizontal: 16,
   },
   horizontalScroll: {
     marginBottom: 20,
-  },
-  verticalList: {
-    marginBottom: 20,
+    paddingHorizontal: 16,
   },
   listContent: {
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#ffffff',
     borderRadius: 8,
-    padding: 12,
+    marginHorizontal: 16,
   },
   emptyMessage: {
     textAlign: 'center',
     color: colors.textSecondary,
     fontSize: 14,
     paddingVertical: 24,
+    paddingHorizontal: 16,
   },
 });
 
@@ -55,6 +52,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [recommendedComics, setRecommendedComics] = useState([]);
   const [recentlyRead, setRecentlyRead] = useState([]);
+  const [popularComics, setPopularComics] = useState([]);
 
   const getComicKey = (item, index) => {
     return String(item?.id ?? item?._id ?? item?.slug ?? item?.title ?? `comic-${index}`);
@@ -67,13 +65,13 @@ export default function Home() {
         const comics = res?.comics;
         const normalizedComics = Array.isArray(comics)
           ? comics.map((comic) => ({
-              id: comic?._id,
-              title: comic?.title || 'N/A',
-              author: extractAuthorFromParentheses(comic?.title) || 'N/A',
-              cover: comic?.coverImage,
-              chapters: comic?.totalChapters,
-              views: comic?.views,
-            }))
+            id: comic?._id,
+            title: comic?.title || 'N/A',
+            author: comic?.author || 'N/A',
+            cover: comic?.coverImage,
+            chapters: comic?.totalChapters,
+            views: comic?.views,
+          }))
           : [];
 
         setRecommendedComics(normalizedComics);
@@ -89,6 +87,30 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    const fetchPopular = async () => {
+      try {
+        const res = await getPopularComics(1);
+        const comics = res?.comics;
+        const normalized = Array.isArray(comics)
+          ? comics.map((comic) => ({
+            id: comic?._id,
+            title: comic?.title || 'N/A',
+            author: comic?.author || 'N/A',
+            cover: comic?.coverImage,
+            chapters: comic?.totalChapters,
+            views: comic?.views,
+          }))
+          : [];
+        setPopularComics(normalized);
+      } catch (error) {
+        console.log('Failed to fetch popular comics', error);
+      }
+    };
+
+    fetchPopular();
+  }, []);
+
+  useEffect(() => {
     if (!isAuthenticated) {
       setRecentlyRead([]);
       return;
@@ -100,13 +122,13 @@ export default function Home() {
         const histories = res?.histories;
         const normalizedHistories = Array.isArray(histories)
           ? histories.map((history) => ({
-              id: history?._id,
-              title: history?.comic?.title || 'N/A',
-              author: extractAuthorFromParentheses(history?.comic?.title) || 'N/A',
-              cover: history?.comic?.coverImage,
-              chapters: history?.comic?.totalChapters,
-              views: history?.comic?.views,
-            }))
+            id: history?._id,
+            title: history?.comic?.title || 'N/A',
+            author: extractAuthorFromParentheses(history?.comic?.title) || 'N/A',
+            cover: history?.comic?.coverImage,
+            chapters: history?.comic?.totalChapters,
+            views: history?.comic?.views,
+          }))
           : [];
 
         setRecentlyRead(normalizedHistories);
@@ -122,9 +144,78 @@ export default function Home() {
     navigation.navigate('StoryDetail', { id: storyId });
   };
 
+  const RecommendedSection = () => (
+    <>
+      <Text style={styles.sectionTitle}>Được Đề Xuất</Text>
+      <FlatList
+        horizontal
+        data={recommendedComics}
+        keyExtractor={getComicKey}
+        renderItem={({ item }) => (
+          <StoryCard
+            title={item.title}
+            author={item.author}
+            cover={item.cover}
+            chapters={item.chapters}
+            views={item.views}
+            onPress={() => handleStoryPress(String(item.id))}
+            variant="vertical"
+          />
+        )}
+        scrollEnabled={true}
+        showsHorizontalScrollIndicator={false}
+        style={styles.horizontalScroll}
+        nestedScrollEnabled={true}
+      />
+    </>
+  );
+
+  const RecentlyReadSection = () => (
+    <>
+      <Text style={styles.sectionTitle}>Đọc Gần Đây</Text>
+      {!isAuthenticated ? (
+        <Text style={styles.emptyMessage}>Hãy đăng nhập để xem tính năng này</Text>
+      ) : recentlyRead.length > 0 ? (
+        <FlatList
+          horizontal
+          data={recentlyRead}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={({ item }) => (
+            <StoryCard
+              title={item.title}
+              author={item.author}
+              cover={item.cover}
+              chapters={item.chapters}
+              views={item.views}
+              onPress={() => handleStoryPress(item.id)}
+              variant="vertical"
+            />
+          )}
+          scrollEnabled={true}
+          showsHorizontalScrollIndicator={false}
+          style={styles.horizontalScroll}
+          nestedScrollEnabled={true}
+        />
+      ) : (
+        <Text style={styles.emptyMessage}>Chưa có lịch sử đọc</Text>
+      )}
+    </>
+  );
+
+  const PopularHeader = () => (
+    <Text style={styles.sectionTitle}>Phổ Biến</Text>
+  );
+
+  const ListHeader = () => (
+    <>
+      <RecommendedSection />
+      <RecentlyReadSection />
+      <PopularHeader />
+    </>
+  );
+
   return (
     <View style={styles.container}>
-      {/* Sticky Search Bar */}
       <View style={styles.searchBarWrapper}>
         <SearchBar
           placeholder="Tìm kiếm truyện..."
@@ -133,15 +224,11 @@ export default function Home() {
         />
       </View>
 
-      {/* Scrollable Content */}
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Recommend Section */}
-        <Text style={styles.sectionTitle}>Được Đề Xuất</Text>
-        <FlatList
-          horizontal
-          data={recommendedComics}
-          keyExtractor={getComicKey}
-          renderItem={({ item }) => (
+      <FlatList
+        data={popularComics}
+        keyExtractor={getComicKey}
+        renderItem={({ item }) => (
+          <View style={styles.listContent}>
             <StoryCard
               title={item.title}
               author={item.author}
@@ -149,64 +236,15 @@ export default function Home() {
               chapters={item.chapters}
               views={item.views}
               onPress={() => handleStoryPress(String(item.id))}
-              variant="vertical"
+              variant="horizontal"
             />
-          )}
-          scrollEnabled={true}
-          showsHorizontalScrollIndicator={false}
-          style={styles.horizontalScroll}
-        />
-
-        {/* Recently Read Section */}
-        <Text style={styles.sectionTitle}>Đọc Gần Đây</Text>
-        {!isAuthenticated ? (
-          <Text style={styles.emptyMessage}>Hãy đăng nhập để xem tính năng này</Text>
-        ) : recentlyRead.length > 0 ? (
-          <FlatList
-            horizontal
-            data={recentlyRead}
-            keyExtractor={(item) => String(item.id)}
-            renderItem={({ item }) => (
-              <StoryCard
-                title={item.title}
-                author={item.author}
-                cover={item.cover}
-                chapters={item.chapters}
-                views={item.views}
-                onPress={() => handleStoryPress(item.id)}
-                variant="vertical"
-              />
-            )}
-            scrollEnabled={true}
-            showsHorizontalScrollIndicator={false}
-            style={styles.horizontalScroll}
-          />
-        ) : (
-          <Text style={styles.emptyMessage}>Chưa có lịch sử đọc</Text>
+          </View>
         )}
-
-        {/* Popular Section */}
-        <Text style={styles.sectionTitle}>Phổ Biến</Text>
-        <FlatList
-          data={popularStories}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <View style={styles.listContent}>
-              <StoryCard
-                title={item.title}
-                author={item.author}
-                cover={item.cover}
-                chapters={item.chapters}
-                onPress={() => handleStoryPress(item.id)}
-                variant="horizontal"
-              />
-            </View>
-          )}
-          scrollEnabled={false}
-          showsVerticalScrollIndicator={false}
-          style={styles.verticalList}
-        />
-      </ScrollView>
+        ListHeaderComponent={ListHeader}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        nestedScrollEnabled={true}
+      />
     </View>
   );
 }

@@ -7,9 +7,10 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
-  FlatList,
+  ActivityIndicator,
   Dimensions,
   ActivityIndicator,
+  StatusBar
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
@@ -65,7 +66,7 @@ export default function StoryDetail() {
         setChapters(comicData?.chapters || []);
         setReviews(reviewsRes?.comments || []);
       } catch (error) {
-        // Keep empty on error - will show empty state
+        console.log('Failed to fetch comic details', error);
       } finally {
         setLoading(false);
       }
@@ -83,7 +84,10 @@ export default function StoryDetail() {
   };
 
   const handleChapterPress = (chapterId) => {
-    // Handle chapter navigation
+    navigation.navigate('ChapterDetail', {
+      chapterId,
+      comicId,
+    });
   };
 
   const handleReadNow = () => {
@@ -134,6 +138,7 @@ export default function StoryDetail() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
+        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
         <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Đang tải thông tin...</Text>
       </View>
@@ -155,11 +160,7 @@ export default function StoryDetail() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        bounces={false}
-      >
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} bounces={false}>
         {/* Hero Section with Cover */}
         <View style={styles.heroSection}>
           <Image
@@ -208,19 +209,6 @@ export default function StoryDetail() {
             <Text style={styles.statLabel}>Cập nhật</Text>
           </View>
         </View>
-
-        {/* Genres
-        <View style={styles.genresSection}>
-          <View style={styles.genresRow}>
-            {comic?.genres?.map((genre, index) => (
-              <View key={index} style={styles.genreBadge}>
-                <Text style={styles.genreText}>
-                  {typeof genre === 'string' ? genre : genre?.name}
-                </Text>
-              </View>
-            ))}
-          </View>
-        </View> */}
 
         {/* Tabs: Overview / Chapter / Review */}
         <View style={styles.tabsContainer}>
@@ -306,6 +294,46 @@ export default function StoryDetail() {
               <View style={styles.chaptersHeader}>
                 <Text style={styles.sectionTitle}>Danh sách chương</Text>
               </View>
+
+        {/* Action Buttons */}
+        <View style={styles.actionSection}>
+          <TouchableOpacity style={styles.readButton} onPress={handleReadNow} activeOpacity={0.8}>
+            <Text style={styles.readButtonIcon}>▶</Text>
+            <Text style={styles.readButtonText}>Đọc ngay</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.followButton} activeOpacity={0.8}>
+            <Text style={styles.followButtonText}>+ Theo dõi</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Description */}
+        <View style={styles.descriptionSection}>
+          <Text style={styles.sectionTitle}>Nội dung</Text>
+          <Text style={styles.description} numberOfLines={showFullDescription ? undefined : 3}>
+            {comic?.description}
+          </Text>
+          {comic?.description && comic.description.length > 100 && (
+            <TouchableOpacity onPress={() => setShowFullDescription(!showFullDescription)}>
+              <Text style={styles.readMore}>{showFullDescription ? 'Thu gọn' : 'Xem thêm'}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Chapters List */}
+        <View style={styles.chaptersSection}>
+          <View style={styles.chaptersHeader}>
+            <Text style={styles.sectionTitle}>Danh sách chương</Text>
+            <View style={styles.chapterCountBadge}>
+              <Text style={styles.chapterCount}>{chapters.length}</Text>
+            </View>
+          </View>
+
+          <View style={styles.chaptersList}>
+            {chapters.map((item, index) => (
+              <View key={item._id || index}>{renderChapter({ item, index })}</View>
+            ))}
+          </View>
+        </View>
 
               <View style={styles.chaptersList}>
                 {chapters.map((item, index) => (
@@ -418,6 +446,7 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 14,
     color: colors.textSecondary,
+    marginTop: 12,
   },
   header: {
     flexDirection: 'row',

@@ -8,6 +8,7 @@ import Home from '../app/(tabs)/home';
 import Bookmarks from '../app/(tabs)/bookmarks';
 import Profile from '../app/(tabs)/profile';
 import StoryDetail from '../app/story/[id]';
+import ChapterDetail from '../app/story/chapter/[id]';
 
 const Stack = createStackNavigator();
 
@@ -18,14 +19,14 @@ const TabRenderScene = SceneMap({
 });
 
 const routes = [
-  { key: 'Home', title: 'Home' },
-  { key: 'Bookmarks', title: 'Bookmarks' },
-  { key: 'Profile', title: 'Profile' },
+  { key: 'Home', title: 'Home', component: Home },
+  { key: 'Bookmarks', title: 'Bookmarks', component: Bookmarks },
+  { key: 'Profile', title: 'Profile', component: Profile },
 ];
 
 const TabNavigator = () => {
-  const [index, setIndex] = useState(0);
   const layout = useWindowDimensions();
+  const [index, setIndex] = useState(0);
 
   const currentRoute = routes[index].key;
 
@@ -61,6 +62,7 @@ const AppNavigator = () => {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="MainTabs" component={TabNavigator} />
       <Stack.Screen name="StoryDetail" component={StoryDetail} />
+      <Stack.Screen name="ChapterDetail" component={ChapterDetail} />
     </Stack.Navigator>
   );
 };
