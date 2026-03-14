@@ -12,14 +12,14 @@ import {
   TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Link } from 'expo-router';
+
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../features/auth/hooks';
 import { authApi } from '../../features/auth/api';
 import { colors } from '../../theme/colors';
 
-export default function LoginScreen() {
+export default function LoginScreen({ onSwitchMode }) {
   const { login } = useAuth();
 
   const [email, setEmail] = useState('');
@@ -67,18 +67,8 @@ export default function LoginScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <StatusBar style="light" />
-
-      {/* Branding header */}
-      <View style={styles.header}>
-        <View style={styles.logoCircle}>
-          <Text style={styles.logoLetter}>C</Text>
-        </View>
-        <Text style={styles.appName}>ChomChom</Text>
-        <Text style={styles.tagline}>Kho truyện không giới hạn</Text>
-      </View>
-
       {/* White card */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -204,14 +194,14 @@ export default function LoginScreen() {
             </TouchableOpacity>
 
             {/* Register link */}
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>Chưa có tài khoản? </Text>
-              <Link href="/(auth)/register" asChild>
-                <TouchableOpacity disabled={busy}>
+            {onSwitchMode && (
+              <View style={styles.footer}>
+                <Text style={styles.footerText}>Chưa có tài khoản? </Text>
+                <TouchableOpacity onPress={() => onSwitchMode('register')} disabled={busy}>
                   <Text style={styles.footerLink}>Đăng ký ngay</Text>
                 </TouchableOpacity>
-              </Link>
-            </View>
+              </View>
+            )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -223,33 +213,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.primary,
-  },
-  header: {
-    alignItems: 'center',
-    paddingTop: 20,
-    paddingBottom: 36,
-  },
-  logoCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.35)',
-  },
-  logoLetter: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: colors.white,
-  },
-  appName: {
-    fontSize: 30,
-    fontWeight: '800',
-    color: colors.white,
-    letterSpacing: 1,
+    paddingTop: 50,
+    marginVertical: -10,
   },
   tagline: {
     fontSize: 13,

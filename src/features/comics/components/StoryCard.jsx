@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
-import { colors } from '../../theme/colors';
-import { fonts } from '../../theme/fonts';
+import { colors } from '../../../theme/colors';
+import { fonts } from '../../../theme/fonts';
 
 const StoryCard = ({ title, author, cover, views, chapters, onPress, variant = 'vertical' }) => {
   const styles = variant === 'vertical' ? verticalStyles : horizontalStyles;

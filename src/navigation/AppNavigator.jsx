@@ -19,14 +19,14 @@ const TabRenderScene = SceneMap({
 });
 
 const routes = [
-  { key: 'Home', title: 'Home' },
-  { key: 'Bookmarks', title: 'Bookmarks' },
-  { key: 'Profile', title: 'Profile' },
+  { key: 'Home', title: 'Home', component: Home },
+  { key: 'Bookmarks', title: 'Bookmarks', component: Bookmarks },
+  { key: 'Profile', title: 'Profile', component: Profile },
 ];
 
 const TabNavigator = () => {
-  const [index, setIndex] = useState(0);
   const layout = useWindowDimensions();
+  const [index, setIndex] = useState(0);
 
   const currentRoute = routes[index].key;
 

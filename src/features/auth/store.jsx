@@ -1,4 +1,5 @@
-import React, { createContext, useReducer } from 'react';
+import React, { createContext, useEffect, useReducer } from 'react';
+import { setupInterceptors } from '../../services/api/interceptors';
 
 const initialState = {
   user: null,
@@ -21,6 +22,14 @@ export const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [state, dispatch] = useReducer(authReducer, initialState);
+
+  useEffect(() => {
+    const cleanup = setupInterceptors({
+      getToken: () => state.token,
+    });
+
+    return cleanup;
+  }, [state.token]);
 
   const login = (user, token) => dispatch({ type: 'LOGIN', payload: { user, token } });
 
