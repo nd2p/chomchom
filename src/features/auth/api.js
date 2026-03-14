@@ -1,3 +1,6 @@
+import { axiosInstance } from '../../services/api/axios';
+import { endpoints } from '../../services/api/endpoints';
+
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 
 export const authApi = {
@@ -14,15 +17,16 @@ export const authApi = {
   },
 
   /**
-   * TODO: Replace with real API call
-   * POST /auth/register
+   * POST /api/auth/register
+   * Body: { username, email, password }
    */
   register: async (payload) => {
-    await delay(1500);
-    return {
-      user: { id: '2', name: payload.name, email: payload.email, provider: 'email' },
-      token: 'mock-token-register',
-    };
+    const { data } = await axiosInstance.post(endpoints.auth.register, {
+      username: payload.username,
+      email: payload.email,
+      password: payload.password,
+    });
+    return data;
   },
 
   /**
