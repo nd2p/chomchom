@@ -11,17 +11,21 @@ export function setupInterceptors({ getToken } = {}) {
     if (!config?.requiresAuth) return config;
 
     const token = getToken?.();
-    if (!token) return config;
 
-    if (typeof config.headers?.set === 'function') {
-      config.headers.set('Authorization', `Bearer ${token}`);
+    if (!token) {
+      console.warn(`[API] Missing auth token for: ${config.url}`);
       return config;
     }
 
-    config.headers = {
-      ...config.headers,
-      Authorization: `Bearer ${token}`,
-    };
+    config.headers = config.headers || {};
+    const authHeader = `Bearer ${token}`;
+
+    if (typeof config.headers.set === 'function') {
+      config.headers.set('Authorization', authHeader);
+    } else {
+      config.headers.Authorization = authHeader;
+    }
+
     return config;
   });
 

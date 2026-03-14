@@ -1,4 +1,4 @@
-import React, { createContext, useEffect, useReducer } from 'react';
+import React, { createContext, useEffect, useRef, useReducer } from 'react';
 import { setupInterceptors } from '../../services/api/interceptors';
 
 const initialState = {
@@ -23,13 +23,20 @@ export const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
+  // Keep a ref so the interceptor always reads the latest token
+  // without needing to be re-registered on every token change.
+  const tokenRef = useRef(state.token);
+  useEffect(() => {
+    tokenRef.current = state.token;
+  }, [state.token]);
+
+  // Register the interceptor ONCE on mount only.
   useEffect(() => {
     const cleanup = setupInterceptors({
-      getToken: () => state.token,
+      getToken: () => tokenRef.current,
     });
-
     return cleanup;
-  }, [state.token]);
+  }, []);
 
   const login = (user, token) => dispatch({ type: 'LOGIN', payload: { user, token } });
 

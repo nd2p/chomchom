@@ -1,18 +1,21 @@
-import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import {
   View,
   Text,
   Image,
+  ScrollView,
   ActivityIndicator,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   Dimensions,
   Modal,
   FlatList,
-  Pressable,
   StyleSheet,
   StatusBar,
-  SafeAreaView,
+  Animated,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 import { getChaptersByComic, getChapterById } from '../../../features/chapters/api';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -40,28 +43,49 @@ export default function ChapterDetail() {
   const [chapter, setChapter] = useState(null);
   const [chapters, setChapters] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [uiVisible, setUiVisible] = useState(true);
   const [chapterModal, setChapterModal] = useState(false);
   const [sortOrder, setSortOrder] = useState('asc');
-
   const [imageLoading, setImageLoading] = useState({});
 
-  const lastTap = useRef(null);
   const chapterListRef = useRef(null);
+  const uiAnim = useRef(new Animated.Value(1)).current;
+  const lastScrollY = useRef(0);
+  const uiVisibleRef = useRef(true); // dùng ref để tránh stale closure trong handleScroll
 
-  // SORT CHAPTERS
-  const sortedChapters = useMemo(() => {
-    return [...chapters].sort((a, b) =>
-      sortOrder === 'asc' ? a.chapterNumber - b.chapterNumber : b.chapterNumber - a.chapterNumber
-    );
-  }, [chapters, sortOrder]);
+  const sortedChapters = useMemo(
+    () =>
+      [...chapters].sort((a, b) =>
+        sortOrder === 'asc' ? a.chapterNumber - b.chapterNumber : b.chapterNumber - a.chapterNumber
+      ),
+    [chapters, sortOrder]
+  );
 
-  const currentChapterIndex = sortedChapters.findIndex((c) => c._id === chapter?._id);
+  const currentIndex = chapters.findIndex((c) => c._id === chapter?._id);
 
-  // LOAD CHAPTER
   useEffect(() => {
-    loadChapter();
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        setLoading(true);
+        const data = await getChapterById(chapterId);
+        const list = await getChaptersByComic(data.comic._id);
+        if (!cancelled) {
+          setChapter(data);
+          setChapters(list.chapters);
+        }
+      } catch (err) {
+        console.log('Load chapter error:', err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, [chapterId]);
 
   useEffect(() => {
@@ -69,22 +93,6 @@ export default function ChapterDetail() {
       saveReading();
     }
   }, [chapter, comicId, chapterId]);
-
-  const loadChapter = async () => {
-    try {
-      setLoading(true);
-
-      const data = await getChapterById(chapterId);
-      const list = await getChaptersByComic(data.comic._id);
-
-      setChapter(data);
-      setChapters(list.chapters);
-    } catch (err) {
-      console.log('Load chapter error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const saveReading = async () => {
     try {
@@ -111,63 +119,74 @@ export default function ChapterDetail() {
   };
 
   // SCROLL TO CURRENT CHAPTER
-  const scrollToCurrentChapter = useCallback(() => {
-    if (!chapterListRef.current || currentChapterIndex < 0) return;
+  // const scrollToCurrentChapter = useCallback(() => {
+  //   if (!chapterListRef.current || currentChapterIndex < 0) return;
 
-    chapterListRef.current.scrollToIndex({
-      index: currentChapterIndex,
-      animated: false,
-      viewPosition: 0.5,
-    });
-  }, [currentChapterIndex]);
+  //   chapterListRef.current.scrollToIndex({
+  //     index: currentChapterIndex,
+  //     animated: false,
+  //     viewPosition: 0.5,
+  //   });
+  // }, [currentChapterIndex]);
 
   useEffect(() => {
-    if (chapterModal) {
-      setTimeout(scrollToCurrentChapter, 120);
-    }
+    if (!chapterModal || !chapterListRef.current) return;
+    const idx = sortedChapters.findIndex((c) => c._id === chapter?._id);
+    if (idx < 0) return;
+    const timer = setTimeout(() => {
+      chapterListRef.current?.scrollToIndex({ index: idx, animated: false, viewPosition: 0.5 });
+    }, 120);
+    return () => clearTimeout(timer);
   }, [chapterModal, sortOrder]);
 
-  // DOUBLE TAP
-  const handleDoubleTap = () => {
-    const now = Date.now();
+  // Sync ref với state để dùng trong handleScroll không bị stale closure
+  useEffect(() => {
+    uiVisibleRef.current = uiVisible;
+  }, [uiVisible]);
 
-    if (lastTap.current && now - lastTap.current < 300) {
-      setUiVisible((v) => !v);
-    }
-
-    lastTap.current = now;
+  const animateUI = (show) => {
+    setUiVisible(show);
+    uiVisibleRef.current = show;
+    Animated.timing(uiAnim, {
+      toValue: show ? 1 : 0,
+      duration: 220,
+      useNativeDriver: true,
+    }).start();
   };
 
-  // NAVIGATION
+  // Xử lý scroll: scroll xuống → ẩn nav, scroll lên → hiện nav
+  const handleScroll = (event) => {
+    const currentY = event.nativeEvent.contentOffset.y;
+    const diff = currentY - lastScrollY.current;
+
+    // Bỏ qua nếu scroll quá nhỏ để tránh giật
+    if (Math.abs(diff) < 5) return;
+
+    const shouldShow = diff < 0; // scroll lên → hiện
+
+    if (shouldShow !== uiVisibleRef.current) {
+      animateUI(shouldShow);
+    }
+
+    lastScrollY.current = currentY;
+  };
+
+  // Tap vẫn toggle thủ công (giữ lại tính năng cũ)
+  const handleTap = () => {
+    animateUI(!uiVisibleRef.current);
+  };
+
   const goPrev = () => {
-    const index = chapters.findIndex((c) => c._id === chapter._id);
-    if (index > 0)
-      navigation.replace('ChapterDetail', { chapterId: chapters[index - 1]._id, comicId: comicId });
+    if (currentIndex > 0) {
+      navigation.replace('ChapterDetail', { chapterId: chapters[currentIndex - 1]._id, comicId: comicId });
+    }
   };
 
   const goNext = () => {
-    const index = chapters.findIndex((c) => c._id === chapter._id);
-    if (index < chapters.length - 1)
-      navigation.replace('ChapterDetail', { chapterId: chapters[index + 1]._id, comicId: comicId });
+    if (currentIndex < chapters.length - 1) {
+      navigation.replace('ChapterDetail', { chapterId: chapters[currentIndex + 1]._id, comicId: comicId });
+    }
   };
-
-  // RENDER PAGE
-  const renderPage = ({ item, index }) => (
-    <View style={styles.pageContainer}>
-      {imageLoading[index] && (
-        <View style={styles.imageLoader}>
-          <ActivityIndicator size="small" color={COLORS.primary} />
-        </View>
-      )}
-
-      <Image
-        source={{ uri: item.imageUrl }}
-        style={styles.pageImage}
-        onLoadStart={() => setImageLoading((p) => ({ ...p, [index]: true }))}
-        onLoadEnd={() => setImageLoading((p) => ({ ...p, [index]: false }))}
-      />
-    </View>
-  );
 
   if (loading || !chapter) {
     return (
@@ -182,83 +201,102 @@ export default function ChapterDetail() {
   return (
     <View style={styles.container}>
       {/* CONTENT */}
-      <Pressable style={styles.contentArea} onPress={handleDoubleTap}>
-        <FlatList
-          data={chapter.pages || []}
-          keyExtractor={(item) => item.pageNumber.toString()}
-          renderItem={renderPage}
-          initialNumToRender={3}
-          maxToRenderPerBatch={3}
-          windowSize={5}
-          showsVerticalScrollIndicator={false}
-        />
-      </Pressable>
+      <ScrollView
+        style={styles.contentArea}
+        showsVerticalScrollIndicator={false}
+        nestedScrollEnabled={true}
+        onScroll={handleScroll}
+      >
+        {(chapter.pages || []).map((page, index) => (
+          <TouchableWithoutFeedback key={page.pageNumber} onPress={handleTap}>
+            <View style={styles.pageContainer}>
+              {imageLoading[index] && (
+                <View style={styles.imageLoader}>
+                  <ActivityIndicator size="small" color={COLORS.primary} />
+                </View>
+              )}
+              <Image
+                source={{ uri: page.imageUrl }}
+                style={styles.pageImage}
+                onLoadStart={() => setImageLoading((p) => ({ ...p, [index]: true }))}
+                onLoadEnd={() => setImageLoading((p) => ({ ...p, [index]: false }))}
+              />
+            </View>
+          </TouchableWithoutFeedback>
+        ))}
+      </ScrollView>
 
       {/* HEADER */}
-      {uiVisible && (
-        <View style={styles.headerOverlay}>
-          <SafeAreaView>
-            <View style={styles.headerContent}>
-              <TouchableOpacity onPress={() => navigation.goBack()}>
-                <Text style={styles.iconText}>❮</Text>
-              </TouchableOpacity>
-
-              <Text style={styles.headerTitle}>Chương {chapter.chapterNumber}</Text>
-
-              <TouchableOpacity onPress={() => setChapterModal(true)}>
-                <Text style={styles.iconText}>☰</Text>
-              </TouchableOpacity>
-            </View>
-          </SafeAreaView>
+      <Animated.View
+        style={[
+          styles.headerOverlay,
+          {
+            opacity: uiAnim,
+            transform: [{ translateY: uiAnim.interpolate({ inputRange: [0, 1], outputRange: [-80, 0] }) }],
+          },
+        ]}
+      >
+        <View style={styles.headerContent}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Text style={styles.iconText}>❮</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Chương {chapter.chapterNumber}</Text>
+          <TouchableOpacity onPress={() => setChapterModal(true)}>
+            <Text style={styles.iconText}>☰</Text>
+          </TouchableOpacity>
         </View>
-      )}
+      </Animated.View>
 
       {/* BOTTOM NAV */}
-      {uiVisible && (
-        <View style={styles.bottomOverlay}>
-          <View style={styles.bottomContent}>
-            <TouchableOpacity
-              style={[
-                styles.navButton,
-                chapters.findIndex((c) => c._id === chapter._id) === 0 && styles.disabledButton,
-              ]}
-              onPress={goPrev}
-            >
-              <Text style={styles.navButtonText}>❮ Trước</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.navButton,
-                chapters.findIndex((c) => c._id === chapter._id) === chapters.length - 1 &&
-                  styles.disabledButton,
-              ]}
-              onPress={goNext}
-            >
-              <Text style={styles.navButtonText}>Sau ❯</Text>
-            </TouchableOpacity>
-          </View>
+      <Animated.View
+        pointerEvents={uiVisible ? 'box-none' : 'none'}
+        style={[
+          styles.bottomOverlay,
+          {
+            opacity: uiAnim,
+            transform: [{ translateY: uiAnim.interpolate({ inputRange: [0, 1], outputRange: [80, 0] }) }],
+          },
+        ]}
+      >
+        <View style={styles.bottomContent}>
+          <TouchableOpacity
+            style={[styles.navButton, currentIndex === 0 && styles.disabledButton]}
+            onPress={goPrev}
+            disabled={currentIndex === 0}
+          >
+            <Text style={styles.navButtonText}>❮ Trước</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.navButton,
+              currentIndex === chapters.length - 1 && styles.disabledButton,
+            ]}
+            onPress={goNext}
+            disabled={currentIndex === chapters.length - 1}
+          >
+            <Text style={styles.navButtonText}>Sau ❯</Text>
+          </TouchableOpacity>
         </View>
-      )}
+      </Animated.View>
 
       {/* CHAPTER MODAL */}
       <Modal visible={chapterModal} transparent animationType="fade">
         <View style={styles.modalBackdrop}>
-          <Pressable style={styles.modalDismissArea} onPress={() => setChapterModal(false)} />
-
+          <TouchableOpacity
+            style={styles.modalDismissArea}
+            activeOpacity={1}
+            onPress={() => setChapterModal(false)}
+          />
           <View style={styles.modalContent}>
             <SafeAreaView style={{ flex: 1 }}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Danh sách chương</Text>
-
                 <TouchableOpacity
-                  style={styles.sortButton}
                   onPress={() => setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
                 >
                   <Text style={styles.sortText}>{sortOrder === 'asc' ? '↑' : '↓'}</Text>
                 </TouchableOpacity>
               </View>
-
               <FlatList
                 ref={chapterListRef}
                 data={sortedChapters}
@@ -267,34 +305,30 @@ export default function ChapterDetail() {
                 initialNumToRender={20}
                 maxToRenderPerBatch={20}
                 windowSize={10}
-                getItemLayout={(data, index) => ({
+                getItemLayout={(_, index) => ({
                   length: ITEM_HEIGHT,
                   offset: ITEM_HEIGHT * index,
                   index,
                 })}
-                onScrollToIndexFailed={(info) =>
+                onScrollToIndexFailed={(info) => {
                   setTimeout(() => {
                     chapterListRef.current?.scrollToIndex({
                       index: info.index,
                       animated: false,
                       viewPosition: 0.5,
                     });
-                  }, 200)
-                }
+                  }, 200);
+                }}
                 renderItem={({ item }) => {
                   const isActive = item._id === chapter._id;
-
                   return (
                     <TouchableOpacity
                       style={[styles.chapterItem, isActive && styles.chapterItemActive]}
                       onPress={() => {
                         setChapterModal(false);
-
-                        if (!isActive)
-                          navigation.replace('ChapterDetail', {
-                            chapterId: item._id,
-                            comicId: comicId,
-                          });
+                        if (!isActive) {
+                          navigation.replace('ChapterDetail', { chapterId: item._id });
+                        }
                       }}
                     >
                       <Text
@@ -302,7 +336,6 @@ export default function ChapterDetail() {
                       >
                         Chương {item.chapterNumber}
                       </Text>
-
                       {isActive && <Text style={styles.activeIndicator}>•</Text>}
                     </TouchableOpacity>
                   );
@@ -351,8 +384,6 @@ const styles = StyleSheet.create({
     height: width * 1.5,
     resizeMode: 'contain',
   },
-
-  // -- OVERLAY STYLES --
   headerOverlay: {
     position: 'absolute',
     top: 0,
@@ -376,9 +407,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     flex: 1,
     textAlign: 'center',
-  },
-  iconButton: {
-    padding: 10,
   },
   iconText: {
     color: COLORS.primary,
@@ -417,8 +445,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 14,
   },
-
-  // -- MODAL STYLES --
   modalBackdrop: {
     flex: 1,
     flexDirection: 'row',
@@ -448,6 +474,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 18,
     color: COLORS.textMain,
+  },
+  sortText: {
+    fontSize: 20,
+    color: COLORS.primary,
+    fontWeight: 'bold',
   },
   chapterItem: {
     height: ITEM_HEIGHT,

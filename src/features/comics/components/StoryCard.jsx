@@ -3,12 +3,37 @@ import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { colors } from '../../../theme/colors';
 import { fonts } from '../../../theme/fonts';
 
+export function formatViews(views) {
+  if (views == null || isNaN(views)) return '0 views';
+
+  const abs = Math.abs(views);
+
+  const format = (value, suffix) => {
+    const formatted = value % 1 === 0 ? value.toString() : value.toFixed(1);
+    return `${formatted.replace(/\.0$/, '')}${suffix} views`;
+  };
+
+  if (abs < 1000) {
+    return `${views} views`;
+  }
+
+  if (abs < 1_000_000) {
+    return format(views / 1_000, 'K');
+  }
+
+  if (abs < 1_000_000_000) {
+    return format(views / 1_000_000, 'M');
+  }
+
+  return format(views / 1_000_000_000, 'B');
+}
+
 const StoryCard = ({ title, author, cover, views, chapters, onPress, variant = 'vertical' }) => {
   const styles = variant === 'vertical' ? verticalStyles : horizontalStyles;
 
   return (
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
-      <Image source={{ uri: cover }} style={styles.image} />
+      <Image source={{ uri: cover }} style={styles.image} resizeMode="stretch" />
       <View style={styles.content}>
         <Text style={styles.title} numberOfLines={2}>
           {title}
@@ -17,7 +42,7 @@ const StoryCard = ({ title, author, cover, views, chapters, onPress, variant = '
           {author}
         </Text>
         {chapters !== undefined && <Text style={styles.meta}>{chapters} chapters</Text>}
-        {views !== undefined && <Text style={styles.view}>{views.toLocaleString()} views</Text>}
+        {views !== undefined && <Text style={styles.view}>{formatViews(views)}</Text>}
       </View>
     </TouchableOpacity>
   );

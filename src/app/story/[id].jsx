@@ -6,7 +6,9 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
+  ActivityIndicator,
   Dimensions,
+  StatusBar,
   Alert,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -149,7 +151,8 @@ export default function StoryDetail() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <View style={styles.loadingSpinner} />
+        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Đang tải thông tin...</Text>
       </View>
     );
@@ -295,18 +298,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.background,
   },
-  loadingSpinner: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 3,
-    borderColor: colors.primary,
-    borderTopColor: 'transparent',
-    marginBottom: 16,
-  },
   loadingText: {
     fontSize: 14,
     color: colors.textSecondary,
+    marginTop: 12,
   },
   header: {
     flexDirection: 'row',
