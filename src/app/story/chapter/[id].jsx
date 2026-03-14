@@ -12,8 +12,10 @@ import {
   FlatList,
   StyleSheet,
   StatusBar,
-  SafeAreaView,
+  Animated,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 import { getChaptersByComic, getChapterById } from '../../../features/chapters/api';
 import { useRoute, useNavigation } from '@react-navigation/native';
 
@@ -43,8 +45,10 @@ export default function ChapterDetail() {
   const [sortOrder, setSortOrder] = useState('asc');
   const [imageLoading, setImageLoading] = useState({});
 
-  const lastTap = useRef(null);
   const chapterListRef = useRef(null);
+  const uiAnim = useRef(new Animated.Value(1)).current;
+  const lastScrollY = useRef(0);
+  const uiVisibleRef = useRef(true); // dùng ref để tránh stale closure trong handleScroll
 
   const sortedChapters = useMemo(
     () =>
@@ -91,12 +95,41 @@ export default function ChapterDetail() {
     return () => clearTimeout(timer);
   }, [chapterModal, sortOrder]);
 
-  const handleTap = () => {
-    const now = Date.now();
-    if (lastTap.current && now - lastTap.current < 300) {
-      setUiVisible((v) => !v);
+  // Sync ref với state để dùng trong handleScroll không bị stale closure
+  useEffect(() => {
+    uiVisibleRef.current = uiVisible;
+  }, [uiVisible]);
+
+  const animateUI = (show) => {
+    setUiVisible(show);
+    uiVisibleRef.current = show;
+    Animated.timing(uiAnim, {
+      toValue: show ? 1 : 0,
+      duration: 220,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  // Xử lý scroll: scroll xuống → ẩn nav, scroll lên → hiện nav
+  const handleScroll = (event) => {
+    const currentY = event.nativeEvent.contentOffset.y;
+    const diff = currentY - lastScrollY.current;
+
+    // Bỏ qua nếu scroll quá nhỏ để tránh giật
+    if (Math.abs(diff) < 5) return;
+
+    const shouldShow = diff < 0; // scroll lên → hiện
+
+    if (shouldShow !== uiVisibleRef.current) {
+      animateUI(shouldShow);
     }
-    lastTap.current = now;
+
+    lastScrollY.current = currentY;
+  };
+
+  // Tap vẫn toggle thủ công (giữ lại tính năng cũ)
+  const handleTap = () => {
+    animateUI(!uiVisibleRef.current);
   };
 
   const goPrev = () => {
@@ -124,7 +157,12 @@ export default function ChapterDetail() {
   return (
     <View style={styles.container}>
       {/* CONTENT */}
-      <ScrollView style={styles.contentArea} showsVerticalScrollIndicator={false} nestedScrollEnabled={true}>
+      <ScrollView
+        style={styles.contentArea}
+        showsVerticalScrollIndicator={false}
+        nestedScrollEnabled={true}
+        onScroll={handleScroll}
+      >
         {(chapter.pages || []).map((page, index) => (
           <TouchableWithoutFeedback key={page.pageNumber} onPress={handleTap}>
             <View style={styles.pageContainer}>
@@ -145,46 +183,57 @@ export default function ChapterDetail() {
       </ScrollView>
 
       {/* HEADER */}
-      {uiVisible && (
-        <View style={styles.headerOverlay}>
-          <SafeAreaView>
-            <View style={styles.headerContent}>
-              <TouchableOpacity onPress={() => navigation.goBack()}>
-                <Text style={styles.iconText}>❮</Text>
-              </TouchableOpacity>
-              <Text style={styles.headerTitle}>Chương {chapter.chapterNumber}</Text>
-              <TouchableOpacity onPress={() => setChapterModal(true)}>
-                <Text style={styles.iconText}>☰</Text>
-              </TouchableOpacity>
-            </View>
-          </SafeAreaView>
+      <Animated.View
+        style={[
+          styles.headerOverlay,
+          {
+            opacity: uiAnim,
+            transform: [{ translateY: uiAnim.interpolate({ inputRange: [0, 1], outputRange: [-80, 0] }) }],
+          },
+        ]}
+      >
+        <View style={styles.headerContent}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Text style={styles.iconText}>❮</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Chương {chapter.chapterNumber}</Text>
+          <TouchableOpacity onPress={() => setChapterModal(true)}>
+            <Text style={styles.iconText}>☰</Text>
+          </TouchableOpacity>
         </View>
-      )}
+      </Animated.View>
 
       {/* BOTTOM NAV */}
-      {uiVisible && (
-        <View style={styles.bottomOverlay}>
-          <View style={styles.bottomContent}>
-            <TouchableOpacity
-              style={[styles.navButton, currentIndex === 0 && styles.disabledButton]}
-              onPress={goPrev}
-              disabled={currentIndex === 0}
-            >
-              <Text style={styles.navButtonText}>❮ Trước</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.navButton,
-                currentIndex === chapters.length - 1 && styles.disabledButton,
-              ]}
-              onPress={goNext}
-              disabled={currentIndex === chapters.length - 1}
-            >
-              <Text style={styles.navButtonText}>Sau ❯</Text>
-            </TouchableOpacity>
-          </View>
+      <Animated.View
+        pointerEvents={uiVisible ? 'box-none' : 'none'}
+        style={[
+          styles.bottomOverlay,
+          {
+            opacity: uiAnim,
+            transform: [{ translateY: uiAnim.interpolate({ inputRange: [0, 1], outputRange: [80, 0] }) }],
+          },
+        ]}
+      >
+        <View style={styles.bottomContent}>
+          <TouchableOpacity
+            style={[styles.navButton, currentIndex === 0 && styles.disabledButton]}
+            onPress={goPrev}
+            disabled={currentIndex === 0}
+          >
+            <Text style={styles.navButtonText}>❮ Trước</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.navButton,
+              currentIndex === chapters.length - 1 && styles.disabledButton,
+            ]}
+            onPress={goNext}
+            disabled={currentIndex === chapters.length - 1}
+          >
+            <Text style={styles.navButtonText}>Sau ❯</Text>
+          </TouchableOpacity>
         </View>
-      )}
+      </Animated.View>
 
       {/* CHAPTER MODAL */}
       <Modal visible={chapterModal} transparent animationType="fade">
