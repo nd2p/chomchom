@@ -10,8 +10,7 @@ import {
   ActivityIndicator,
   Dimensions,
   Alert,
-  ActivityIndicator,
-  StatusBar
+  StatusBar,
 } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
@@ -57,7 +56,6 @@ export default function StoryDetail() {
     }, [comicId])
   );
 
-
   // Helper to normalize status from API
   const getStatusText = (status) => {
     if (status === 'completed') return 'Hoàn thành';
@@ -85,7 +83,7 @@ export default function StoryDetail() {
       try {
         const [comicRes, reviewsRes] = await Promise.all([
           getComicDetails(comicId),
-          getComicReviews(comicId)
+          getComicReviews(comicId),
         ]);
         const comicData = comicRes?.comic || comicRes;
         setComic(comicData);
@@ -265,9 +263,7 @@ export default function StoryDetail() {
             <Text style={styles.statLabel}>Chương</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>
-              {getStatusText(comic?.status)}
-            </Text>
+            <Text style={styles.statValue}>{getStatusText(comic?.status)}</Text>
             <Text style={styles.statLabel}>Trạng thái</Text>
           </View>
           <View style={styles.statCard}>
@@ -336,16 +332,11 @@ export default function StoryDetail() {
             {/* Description */}
             <View style={styles.descriptionSection}>
               <Text style={styles.sectionTitle}>Nội dung</Text>
-              <Text
-                style={styles.description}
-                numberOfLines={showFullDescription ? undefined : 5}
-              >
+              <Text style={styles.description} numberOfLines={showFullDescription ? undefined : 5}>
                 {comic?.description || 'Đang cập nhật...'}
               </Text>
               {comic?.description && comic.description.length > 100 && (
-                <TouchableOpacity
-                  onPress={() => setShowFullDescription(!showFullDescription)}
-                >
+                <TouchableOpacity onPress={() => setShowFullDescription(!showFullDescription)}>
                   <Text style={styles.readMore}>
                     {showFullDescription ? 'Thu gọn' : 'Xem thêm'}
                   </Text>
@@ -361,63 +352,70 @@ export default function StoryDetail() {
                 <Text style={styles.sectionTitle}>Danh sách chương</Text>
               </View>
 
-        {/* Action Buttons */}
-        <View style={styles.actionSection}>
-          <TouchableOpacity style={styles.readButton} onPress={handleReadNow} activeOpacity={0.8}>
-            <Text style={styles.readButtonIcon}>▶</Text>
-            <Text style={styles.readButtonText}>
-              {lastChapter
-                ? `Tiếp tục: C.${lastChapter.chapterNumber}`
-                : lastChapterId
-                  ? 'Đang tải...'
-                  : 'Đọc ngay'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.followButton, isLiked && styles.followedButton]}
-            onPress={handleToggleFollow}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.followButtonText, isLiked && styles.followedText]}>
-              {isLiked ? 'Đang theo dõi' : '+ Theo dõi'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+              {/* Action Buttons */}
+              <View style={styles.actionSection}>
+                <TouchableOpacity
+                  style={styles.readButton}
+                  onPress={handleReadNow}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.readButtonIcon}>▶</Text>
+                  <Text style={styles.readButtonText}>
+                    {lastChapter
+                      ? `Tiếp tục: C.${lastChapter.chapterNumber}`
+                      : lastChapterId
+                        ? 'Đang tải...'
+                        : 'Đọc ngay'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.followButton, isLiked && styles.followedButton]}
+                  onPress={handleToggleFollow}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.followButtonText, isLiked && styles.followedText]}>
+                    {isLiked ? 'Đang theo dõi' : '+ Theo dõi'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
-        {/* Description */}
-        <View style={styles.descriptionSection}>
-          <Text style={styles.sectionTitle}>Nội dung</Text>
-          <Text style={styles.description} numberOfLines={showFullDescription ? undefined : 3}>
-            {comic?.description}
-          </Text>
-          {comic?.description && comic.description.length > 100 && (
-            <TouchableOpacity onPress={() => setShowFullDescription(!showFullDescription)}>
-              <Text style={styles.readMore}>{showFullDescription ? 'Thu gọn' : 'Xem thêm'}</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+              {/* Description */}
+              <View style={styles.descriptionSection}>
+                <Text style={styles.sectionTitle}>Nội dung</Text>
+                <Text
+                  style={styles.description}
+                  numberOfLines={showFullDescription ? undefined : 3}
+                >
+                  {comic?.description}
+                </Text>
+                {comic?.description && comic.description.length > 100 && (
+                  <TouchableOpacity onPress={() => setShowFullDescription(!showFullDescription)}>
+                    <Text style={styles.readMore}>
+                      {showFullDescription ? 'Thu gọn' : 'Xem thêm'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
 
-        {/* Chapters List */}
-        <View style={styles.chaptersSection}>
-          <View style={styles.chaptersHeader}>
-            <Text style={styles.sectionTitle}>Danh sách chương</Text>
-            <View style={styles.chapterCountBadge}>
-              <Text style={styles.chapterCount}>{chapters.length}</Text>
-            </View>
-          </View>
+              {/* Chapters List */}
+              <View style={styles.chaptersSection}>
+                <View style={styles.chaptersHeader}>
+                  <Text style={styles.sectionTitle}>Danh sách chương</Text>
+                  <View style={styles.chapterCountBadge}>
+                    <Text style={styles.chapterCount}>{chapters.length}</Text>
+                  </View>
+                </View>
 
-          <View style={styles.chaptersList}>
-            {chapters.map((item, index) => (
-              <View key={item._id || index}>{renderChapter({ item, index })}</View>
-            ))}
-          </View>
-        </View>
+                <View style={styles.chaptersList}>
+                  {chapters.map((item, index) => (
+                    <View key={item._id || index}>{renderChapter({ item, index })}</View>
+                  ))}
+                </View>
+              </View>
 
               <View style={styles.chaptersList}>
                 {chapters.map((item, index) => (
-                  <View key={item._id || index}>
-                    {renderChapter({ item, index })}
-                  </View>
+                  <View key={item._id || index}>{renderChapter({ item, index })}</View>
                 ))}
               </View>
             </View>
@@ -440,7 +438,11 @@ export default function StoryDetail() {
                 <View style={styles.starRating}>
                   {[1, 2, 3, 4, 5].map((star) => (
                     <TouchableOpacity key={star} onPress={() => setReviewRating(star)}>
-                      <Text style={[styles.starIcon, star <= reviewRating && styles.starIconActive]}>★</Text>
+                      <Text
+                        style={[styles.starIcon, star <= reviewRating && styles.starIconActive]}
+                      >
+                        ★
+                      </Text>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -471,7 +473,15 @@ export default function StoryDetail() {
                       </View>
                       <View style={styles.reviewStars}>
                         {[1, 2, 3, 4, 5].map((star) => (
-                          <Text key={star} style={[styles.reviewStarIcon, star <= review.rating && styles.reviewStarActive]}>★</Text>
+                          <Text
+                            key={star}
+                            style={[
+                              styles.reviewStarIcon,
+                              star <= review.rating && styles.reviewStarActive,
+                            ]}
+                          >
+                            ★
+                          </Text>
                         ))}
                       </View>
                       <Text style={styles.reviewText}>{review.content}</Text>
@@ -486,26 +496,30 @@ export default function StoryDetail() {
         )}
       </ScrollView>
 
-      {/* Action Buttons - Fixed at bottom - Only show on Overview */}
-      {activeTab === 'overview' ? (
-      <View style={styles.actionSection}>
-        <TouchableOpacity
-          style={styles.readButton}
-          onPress={handleReadNow}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.readButtonIcon}>▶</Text>
-          <Text style={styles.readButtonText}>Đọc ngay</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.followButton}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.followButtonText}>+ Theo dõi</Text>
-        </TouchableOpacity>
-      </View>
-      ) : null}
+      {activeTab === 'overview' && (
+        <View style={styles.actionSection}>
+          <TouchableOpacity style={styles.readButton} onPress={handleReadNow} activeOpacity={0.8}>
+            <Text style={styles.readButtonIcon}>▶</Text>
+            <Text style={styles.readButtonText}>
+              {lastChapter
+                ? `Tiếp tục: C.${lastChapter.chapterNumber || lastChapter.title}`
+                : lastChapterId
+                  ? 'Đang tải...'
+                  : 'Đọc ngay'}
+            </Text>
+          </TouchableOpacity>
 
+          <TouchableOpacity
+            style={[styles.followButton, isLiked && styles.followedButton]}
+            onPress={handleToggleFollow}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.followButtonText, isLiked && styles.followedText]}>
+              {isLiked ? 'Đang theo dõi' : '+ Theo dõi'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
