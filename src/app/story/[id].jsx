@@ -13,8 +13,9 @@ import {
   StatusBar,
 } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
-import { colors } from '../../theme/colors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTranslation } from 'react-i18next';
+import { useSettings } from '../../features/settings/hooks';
 import { likeComic } from '../../features/bookmarks/api';
 import {
   getComicDetails,
@@ -24,66 +25,555 @@ import {
 
 const { width } = Dimensions.get('window');
 
+function makeStyles(colors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+    },
+    loadingText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginTop: 12,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 8,
+      paddingVertical: 8,
+      backgroundColor: colors.background,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      zIndex: 10,
+    },
+    headerButton: {
+      padding: 12,
+    },
+    headerButtonText: {
+      fontSize: 32,
+      fontWeight: '300',
+      color: colors.text,
+      lineHeight: 32,
+    },
+    headerTitle: {
+      flex: 1,
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text,
+      textAlign: 'left',
+      paddingHorizontal: 8,
+    },
+    scrollView: {
+      flex: 1,
+      paddingBottom: 20,
+    },
+    heroSection: {
+      width: width,
+      height: 280,
+      position: 'relative',
+    },
+    coverImage: {
+      width: '100%',
+      height: '100%',
+      position: 'absolute',
+    },
+    heroOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    },
+    heroContent: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      padding: 16,
+      paddingBottom: 24,
+    },
+    coverImageSmall: {
+      width: 120,
+      height: 170,
+      borderRadius: 12,
+      borderWidth: 3,
+      borderColor: 'rgba(255, 255, 255, 0.3)',
+    },
+    heroInfo: {
+      flex: 1,
+      marginLeft: 16,
+      marginBottom: 8,
+    },
+    title: {
+      fontSize: 22,
+      fontWeight: '700',
+      color: '#ffffff',
+      marginBottom: 6,
+      textShadowColor: 'rgba(0, 0, 0, 0.5)',
+      textShadowOffset: { width: 1, height: 1 },
+      textShadowRadius: 3,
+    },
+    author: {
+      fontSize: 14,
+      color: 'rgba(255, 255, 255, 0.9)',
+      marginBottom: 8,
+    },
+    ratingRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    ratingStars: {
+      fontSize: 16,
+      color: '#fbbf24',
+      marginRight: 4,
+    },
+    ratingValue: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: '#ffffff',
+    },
+    ratingDivider: {
+      fontSize: 14,
+      color: 'rgba(255, 255, 255, 0.5)',
+      marginHorizontal: 8,
+    },
+    viewsValue: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: '#ffffff',
+    },
+    viewsLabel: {
+      fontSize: 12,
+      color: 'rgba(255, 255, 255, 0.8)',
+    },
+    statsContainer: {
+      flexDirection: 'row',
+      paddingHorizontal: 16,
+      paddingVertical: 16,
+      backgroundColor: colors.background,
+      marginTop: -20,
+      marginHorizontal: 16,
+      borderRadius: 16,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.1,
+      shadowRadius: 12,
+      elevation: 5,
+    },
+    statCard: {
+      flex: 1,
+      alignItems: 'center',
+      paddingVertical: 8,
+    },
+    statValue: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: colors.primary,
+      marginBottom: 4,
+    },
+    statLabel: {
+      fontSize: 12,
+      color: colors.textMuted,
+    },
+    genresRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    genreBadge: {
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+      borderRadius: 16,
+      backgroundColor: colors.secondary,
+    },
+    genreText: {
+      fontSize: 13,
+      color: colors.primary,
+      fontWeight: '500',
+    },
+    tabsContainer: {
+      flexDirection: 'row',
+      paddingHorizontal: 16,
+      marginTop: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    tab: {
+      flex: 1,
+      paddingVertical: 12,
+      alignItems: 'center',
+    },
+    tabActive: {
+      borderBottomWidth: 2,
+      borderBottomColor: colors.primary,
+    },
+    tabText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    tabTextActive: {
+      color: colors.primary,
+    },
+    tabContent: {
+      paddingHorizontal: 16,
+      paddingBottom: 16,
+    },
+    overviewItem: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    overviewLabel: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      flex: 1,
+    },
+    overviewValue: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+      flex: 2,
+      textAlign: 'right',
+    },
+    descriptionSection: {
+      paddingVertical: 16,
+    },
+    sectionTitle: {
+      fontSize: 17,
+      fontWeight: '700',
+      color: colors.text,
+      marginBottom: 10,
+    },
+    description: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      lineHeight: 22,
+    },
+    readMore: {
+      fontSize: 14,
+      color: colors.primary,
+      fontWeight: '600',
+      marginTop: 8,
+    },
+    chaptersSection: {
+      marginTop: 16,
+    },
+    chaptersHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    chapterCountBadge: {
+      backgroundColor: colors.secondary,
+      paddingHorizontal: 10,
+      paddingVertical: 2,
+      borderRadius: 10,
+      marginLeft: 8,
+    },
+    chapterCountText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.primary,
+    },
+    chaptersList: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      overflow: 'hidden',
+    },
+    chapterItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 14,
+      paddingHorizontal: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    chapterLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
+    chapterNumberBadge: {
+      width: 32,
+      height: 32,
+      borderRadius: 8,
+      backgroundColor: colors.secondary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 12,
+    },
+    chapterNumber: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.primary,
+    },
+    chapterInfo: {
+      flex: 1,
+    },
+    chapterTitle: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 2,
+    },
+    chapterTime: {
+      fontSize: 12,
+      color: colors.textMuted,
+    },
+    chapterRight: {
+      marginLeft: 8,
+    },
+    chapterArrow: {
+      fontSize: 20,
+      color: colors.textMuted,
+      fontWeight: '300',
+    },
+    actionSection: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      flexDirection: 'row',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      paddingBottom: 34,
+      gap: 12,
+      backgroundColor: colors.background,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    readButton: {
+      flex: 1.5,
+      backgroundColor: colors.primary,
+      paddingVertical: 14,
+      borderRadius: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    readButtonIcon: {
+      fontSize: 14,
+      color: colors.white,
+      marginRight: 8,
+    },
+    readButtonText: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.white,
+    },
+    followButton: {
+      flex: 1,
+      backgroundColor: colors.card,
+      paddingVertical: 14,
+      borderRadius: 12,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    followedButton: {
+      backgroundColor: colors.secondary,
+      borderColor: colors.primary,
+    },
+    followButtonText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    followedText: {
+      color: colors.primary,
+    },
+    reviewHeader: {
+      marginBottom: 16,
+      paddingTop: 8,
+    },
+    reviewHeaderLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    reviewTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    reviewStar: {
+      fontSize: 16,
+      color: '#f59e0b',
+      marginLeft: 8,
+    },
+    reviewCount: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginLeft: 4,
+    },
+    writeReview: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      marginBottom: 16,
+      gap: 8,
+    },
+    writeReviewContent: {
+      flex: 1,
+    },
+    starRating: {
+      flexDirection: 'row',
+      marginBottom: 8,
+    },
+    starIcon: {
+      fontSize: 24,
+      color: colors.border,
+      marginRight: 4,
+    },
+    starIconActive: {
+      color: '#f59e0b',
+    },
+    reviewInput: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 12,
+      fontSize: 14,
+      color: colors.text,
+      maxHeight: 80,
+    },
+    sendButton: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderRadius: 12,
+    },
+    sendButtonText: {
+      color: colors.white,
+      fontWeight: '600',
+    },
+    reviewsList: {
+      marginTop: 8,
+    },
+    reviewItem: {
+      flexDirection: 'row',
+      marginBottom: 16,
+    },
+    reviewAvatar: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      marginRight: 12,
+    },
+    reviewContent: {
+      flex: 1,
+    },
+    reviewHeaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 4,
+    },
+    reviewUser: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    reviewDate: {
+      fontSize: 12,
+      color: colors.textMuted,
+    },
+    reviewStars: {
+      flexDirection: 'row',
+      marginBottom: 4,
+    },
+    reviewStarIcon: {
+      fontSize: 12,
+      color: colors.border,
+      marginRight: 2,
+    },
+    reviewStarActive: {
+      color: '#f59e0b',
+    },
+    reviewText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      lineHeight: 20,
+    },
+    reviewPlaceholder: {
+      fontSize: 14,
+      color: colors.textMuted,
+      textAlign: 'center',
+      paddingVertical: 24,
+    },
+    inlineActionSection: {
+      flexDirection: 'row',
+      marginVertical: 12,
+      gap: 12,
+    },
+  });
+}
+
 export default function StoryDetail() {
   const navigation = useNavigation();
   const route = useRoute();
+  const { t, i18n } = useTranslation();
+  const { colors } = useSettings();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   const comicId = route.params?.id;
+
   const [lastChapterId, setLastChapterId] = useState(null);
   const [comic, setComic] = useState(null);
   const [chapters, setChapters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'chapter', or 'review'
+  const [activeTab, setActiveTab] = useState('overview');
   const [reviews, setReviews] = useState([]);
   const [reviewText, setReviewText] = useState('');
   const [reviewRating, setReviewRating] = useState(0);
-  // useMemo ghi nhớ kết quả của lastChapter. Chạy lại khi chapters & lastChapterId change
+
   const lastChapter = useMemo(() => {
     if (!lastChapterId || chapters.length === 0) return null;
     return chapters.find((chap) => chap._id === lastChapterId);
   }, [lastChapterId, chapters]);
 
-  // Chạy mỗi khi màn hình đó hiển thị trước mắt người dùng.
   useFocusEffect(
     React.useCallback(() => {
-      const updateUI = async () => {
-        const key = `history_${comicId}`;
-        const saved = await AsyncStorage.getItem(key);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          setLastChapterId(parsed.chapterId);
-        }
-      };
-
-      if (comicId) updateUI();
-    }, [comicId])
+      if (!comicId) return;
+      AsyncStorage.getItem(`history_${comicId}`).then((saved) => {
+        if (saved) setLastChapterId(JSON.parse(saved).chapterId);
+      });
+    }, [comicId]),
   );
 
-  // Helper to normalize status from API
   const getStatusText = (status) => {
-    if (status === 'completed') return 'Hoàn thành';
-    if (status === 'ongoing') return 'Đang ra';
+    if (status === 'completed') return t('story.status.completed');
+    if (status === 'ongoing') return t('story.status.ongoing');
+    return '';
   };
 
-  // Helper to format date
   const formatDate = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return '';
-    return date.toLocaleDateString('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
+    const locale = i18n.language === 'vi' ? 'vi-VN' : 'en-US';
+    return date.toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
   useEffect(() => {
+    if (!comicId) {
+      setLoading(false);
+      return;
+    }
     const fetchComicDetails = async () => {
-      if (!comicId) {
-        setLoading(false);
-        return;
-      }
       try {
         const [comicRes, reviewsRes] = await Promise.all([
           getComicDetails(comicId),
@@ -99,89 +589,54 @@ export default function StoryDetail() {
         setLoading(false);
       }
     };
-
     fetchComicDetails();
   }, [comicId]);
 
-  const handleBack = () => {
-    navigation.goBack();
-  };
-
-  useEffect(() => {
-    const loadHistory = async () => {
-      try {
-        const data = await AsyncStorage.getItem(`history_${comicId}`);
-
-        if (data) {
-          const history = JSON.parse(data);
-          setLastChapterId(history.chapterId);
-        }
-      } catch (error) {
-        console.log('Load history error:', error);
-      }
-    };
-
-    if (comicId) {
-      loadHistory();
-    }
-  }, [comicId]);
-
-  const handleBookmark = () => {
-    // Handle bookmark
-  };
-
   const handleChapterPress = (chapterId) => {
-    navigation.navigate('ChapterDetail', {
-      chapterId,
-      comicId,
-    });
+    navigation.navigate('ChapterDetail', { chapterId, comicId });
   };
 
   const handleReadNow = () => {
     const targetId = lastChapterId || chapters[0]?._id;
-
     if (targetId) {
-      navigation.navigate('ChapterDetail', {
-        chapterId: targetId,
-        comicId: comicId,
-      });
+      navigation.navigate('ChapterDetail', { chapterId: targetId, comicId });
     }
   };
 
   const handleToggleFollow = async () => {
     try {
       const token = await AsyncStorage.getItem('userToken');
-
       if (!token) {
-        Alert.alert('Yêu cầu đăng nhập', 'Bạn cần đăng nhập để theo dõi truyện này!');
+        Alert.alert(t('story.detail.followLoginTitle'), t('story.detail.followLoginMessage'));
         return;
       }
-
-      setIsLiked(!isLiked);
-
+      setIsLiked((prev) => !prev);
       await likeComic(comicId);
     } catch (error) {
       console.log('Toggle follow error:', error);
-      setIsLiked(isLiked);
-      Alert.alert('Lỗi', 'Không thể thay đổi trạng thái theo dõi lúc này.');
+      setIsLiked((prev) => !prev);
+      Alert.alert(t('common.error'), t('story.detail.followError'));
     }
   };
 
   const handleSubmitReview = async () => {
-    if (!reviewText.trim() || reviewRating === 0) {
-      return;
-    }
+    if (!reviewText.trim() || reviewRating === 0) return;
     try {
       await createReview(comicId, reviewText, reviewRating);
-      // Refresh reviews
       const reviewsRes = await getComicReviews(comicId);
       setReviews(reviewsRes?.comments || []);
       setReviewText('');
       setReviewRating(0);
-    } catch (error) {
-      // Handle error silently
+    } catch {
+      // silent
     }
   };
+
+  const readButtonLabel = lastChapter
+    ? t('story.detail.readContinue', { chapter: lastChapter.chapterNumber })
+    : lastChapterId
+      ? t('common.loading')
+      : t('story.detail.readNow');
 
   const renderChapter = ({ item, index }) => (
     <TouchableOpacity
@@ -204,14 +659,12 @@ export default function StoryDetail() {
     </TouchableOpacity>
   );
 
-  // Skip loading screen - show content directly
-  // if (loading) {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+        <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Đang tải thông tin...</Text>
+        <Text style={styles.loadingText}>{t('common.loading')}</Text>
       </View>
     );
   }
@@ -220,11 +673,11 @@ export default function StoryDetail() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
+        <TouchableOpacity style={styles.headerButton} onPress={() => navigation.goBack()}>
           <Text style={styles.headerButtonText}>‹</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>
-          {comic?.title || 'Chi tiết truyện'}
+          {comic?.title || t('story.detail.defaultTitle')}
         </Text>
       </View>
 
@@ -254,7 +707,7 @@ export default function StoryDetail() {
                 <Text style={styles.ratingValue}>{String(comic?.rating?.toFixed(1) || '0.0')}</Text>
                 <Text style={styles.ratingDivider}>|</Text>
                 <Text style={styles.viewsValue}>{comic?.views?.toLocaleString() || '0'}</Text>
-                <Text style={styles.viewsLabel}> lượt đọc</Text>
+                <Text style={styles.viewsLabel}> {t('story.detail.reads')}</Text>
               </View>
             </View>
           </View>
@@ -264,15 +717,15 @@ export default function StoryDetail() {
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{chapters?.length || '0'}</Text>
-            <Text style={styles.statLabel}>Chương</Text>
+            <Text style={styles.statLabel}>{t('story.overview.chapters')}</Text>
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{getStatusText(comic?.status)}</Text>
-            <Text style={styles.statLabel}>Trạng thái</Text>
+            <Text style={styles.statLabel}>{t('story.detail.status')}</Text>
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{formatDate(comic?.updatedAt) || ''}</Text>
-            <Text style={styles.statLabel}>Cập nhật</Text>
+            <Text style={styles.statLabel}>{t('story.detail.updated')}</Text>
           </View>
         </View>
 
@@ -283,7 +736,7 @@ export default function StoryDetail() {
             onPress={() => setActiveTab('overview')}
           >
             <Text style={[styles.tabText, activeTab === 'overview' && styles.tabTextActive]}>
-              Overview
+              {t('story.tabs.overview')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -291,7 +744,7 @@ export default function StoryDetail() {
             onPress={() => setActiveTab('chapter')}
           >
             <Text style={[styles.tabText, activeTab === 'chapter' && styles.tabTextActive]}>
-              Chapter ({chapters.length})
+              {t('story.detail.tabChapter')} ({chapters.length})
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -299,29 +752,26 @@ export default function StoryDetail() {
             onPress={() => setActiveTab('review')}
           >
             <Text style={[styles.tabText, activeTab === 'review' && styles.tabTextActive]}>
-              Review
+              {t('story.tabs.reviews')}
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* Tab Content */}
-        {activeTab === 'overview' ? (
+        {activeTab === 'overview' && (
           <View style={styles.tabContent}>
-            {/* Author */}
             <View style={styles.overviewItem}>
-              <Text style={styles.overviewLabel}>Tác giả</Text>
-              <Text style={styles.overviewValue}>{comic?.author || 'Đang cập nhật'}</Text>
+              <Text style={styles.overviewLabel}>{t('story.detail.author')}</Text>
+              <Text style={styles.overviewValue}>
+                {comic?.author || t('story.detail.updating')}
+              </Text>
             </View>
-
-            {/* Status */}
             <View style={styles.overviewItem}>
-              <Text style={styles.overviewLabel}>Trạng thái</Text>
+              <Text style={styles.overviewLabel}>{t('story.detail.status')}</Text>
               <Text style={styles.overviewValue}>{getStatusText(comic?.status)}</Text>
             </View>
-
-            {/* Genres */}
             <View style={styles.overviewItem}>
-              <Text style={styles.overviewLabel}>Thể loại</Text>
+              <Text style={styles.overviewLabel}>{t('story.detail.genre')}</Text>
               <View style={styles.genresRow}>
                 {comic?.genres?.map((genre, index) => (
                   <View key={index} style={styles.genreBadge}>
@@ -332,97 +782,68 @@ export default function StoryDetail() {
                 ))}
               </View>
             </View>
-
-            {/* Description */}
             <View style={styles.descriptionSection}>
-              <Text style={styles.sectionTitle}>Nội dung</Text>
+              <Text style={styles.sectionTitle}>{t('story.detail.description')}</Text>
               <Text style={styles.description} numberOfLines={showFullDescription ? undefined : 5}>
-                {comic?.description || 'Đang cập nhật...'}
+                {comic?.description || t('story.detail.updating')}
               </Text>
               {comic?.description && comic.description.length > 100 && (
-                <TouchableOpacity onPress={() => setShowFullDescription(!showFullDescription)}>
+                <TouchableOpacity onPress={() => setShowFullDescription((v) => !v)}>
                   <Text style={styles.readMore}>
-                    {showFullDescription ? 'Thu gọn' : 'Xem thêm'}
+                    {showFullDescription ? t('story.detail.collapse') : t('story.detail.expand')}
                   </Text>
                 </TouchableOpacity>
               )}
             </View>
           </View>
-        ) : activeTab === 'chapter' ? (
+        )}
+
+        {activeTab === 'chapter' && (
           <View style={styles.tabContent}>
-            {/* Chapters List */}
+            <View style={styles.inlineActionSection}>
+              <TouchableOpacity style={styles.readButton} onPress={handleReadNow} activeOpacity={0.8}>
+                <Text style={styles.readButtonIcon}>▶</Text>
+                <Text style={styles.readButtonText}>{readButtonLabel}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.followButton, isLiked && styles.followedButton]}
+                onPress={handleToggleFollow}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.followButtonText, isLiked && styles.followedText]}>
+                  {isLiked ? t('story.detail.following') : t('story.detail.follow')}
+                </Text>
+              </TouchableOpacity>
+            </View>
             <View style={styles.chaptersSection}>
-              {/* Action Buttons */}
-              <View style={styles.actionSection}>
-                <TouchableOpacity
-                  style={styles.readButton}
-                  onPress={handleReadNow}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.readButtonIcon}>▶</Text>
-                  <Text style={styles.readButtonText}>
-                    {lastChapter
-                      ? `Tiếp tục: C.${lastChapter.chapterNumber}`
-                      : lastChapterId
-                        ? 'Đang tải...'
-                        : 'Đọc ngay'}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.followButton, isLiked && styles.followedButton]}
-                  onPress={handleToggleFollow}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.followButtonText, isLiked && styles.followedText]}>
-                    {isLiked ? 'Đang theo dõi' : '+ Theo dõi'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Chapters List */}
-              <View style={styles.chaptersSection}>
-                <View style={styles.chaptersHeader}>
-                  <Text style={styles.sectionTitle}>Danh sách chương</Text>
-                  <View style={styles.chapterCountBadge}>
-                    <Text style={styles.chapterCount}>{chapters.length}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.chaptersList}>
-                  {chapters.map((item, index) => (
-                    <View key={item._id || index}>{renderChapter({ item, index })}</View>
-                  ))}
+              <View style={styles.chaptersHeader}>
+                <Text style={styles.sectionTitle}>{t('story.chapter.list')}</Text>
+                <View style={styles.chapterCountBadge}>
+                  <Text style={styles.chapterCountText}>{chapters.length}</Text>
                 </View>
               </View>
-
               <View style={styles.chaptersList}>
-                {chapters.map((item, index) => (
-                  <View key={item._id || index}>{renderChapter({ item, index })}</View>
-                ))}
+                {chapters.map((item, index) => renderChapter({ item, index }))}
               </View>
             </View>
           </View>
-        ) : (
+        )}
+
+        {activeTab === 'review' && (
           <View style={styles.tabContent}>
-            {/* Review Tab */}
             <View style={styles.reviewHeader}>
               <View style={styles.reviewHeaderLeft}>
-                <Text style={styles.reviewTitle}>Đánh giá</Text>
+                <Text style={styles.reviewTitle}>{t('story.detail.reviews')}</Text>
                 <Text style={styles.reviewStar}>★</Text>
                 <Text style={styles.reviewCount}>{reviews.length}</Text>
               </View>
             </View>
-
-            {/* Write Review */}
             <View style={styles.writeReview}>
               <View style={styles.writeReviewContent}>
-                {/* Star Rating */}
                 <View style={styles.starRating}>
                   {[1, 2, 3, 4, 5].map((star) => (
                     <TouchableOpacity key={star} onPress={() => setReviewRating(star)}>
-                      <Text
-                        style={[styles.starIcon, star <= reviewRating && styles.starIconActive]}
-                      >
+                      <Text style={[styles.starIcon, star <= reviewRating && styles.starIconActive]}>
                         ★
                       </Text>
                     </TouchableOpacity>
@@ -430,7 +851,7 @@ export default function StoryDetail() {
                 </View>
                 <TextInput
                   style={styles.reviewInput}
-                  placeholder="Viết đánh giá..."
+                  placeholder={t('story.detail.reviewPlaceholder')}
                   placeholderTextColor={colors.textMuted}
                   value={reviewText}
                   onChangeText={setReviewText}
@@ -438,19 +859,17 @@ export default function StoryDetail() {
                 />
               </View>
               <TouchableOpacity style={styles.sendButton} onPress={handleSubmitReview}>
-                <Text style={styles.sendButtonText}>Gửi</Text>
+                <Text style={styles.sendButtonText}>{t('story.detail.send')}</Text>
               </TouchableOpacity>
             </View>
-
-            {/* Reviews List */}
             {reviews.length > 0 ? (
               <View style={styles.reviewsList}>
                 {reviews.map((review) => (
-                  <View key={review.id} style={styles.reviewItem}>
-                    <Image source={{ uri: review.user.avatar }} style={styles.reviewAvatar} />
+                  <View key={review.id || review._id} style={styles.reviewItem}>
+                    <Image source={{ uri: review.user?.avatar }} style={styles.reviewAvatar} />
                     <View style={styles.reviewContent}>
                       <View style={styles.reviewHeaderRow}>
-                        <Text style={styles.reviewUser}>{review.user.name}</Text>
+                        <Text style={styles.reviewUser}>{review.user?.name}</Text>
                         <Text style={styles.reviewDate}>{formatDate(review.createdAt)}</Text>
                       </View>
                       <View style={styles.reviewStars}>
@@ -472,32 +891,25 @@ export default function StoryDetail() {
                 ))}
               </View>
             ) : (
-              <Text style={styles.reviewPlaceholder}>Chưa có đánh giá nào</Text>
+              <Text style={styles.reviewPlaceholder}>{t('story.detail.noReviews')}</Text>
             )}
           </View>
         )}
       </ScrollView>
 
-      {activeTab === 'overview' && (
+      {activeTab !== 'chapter' && (
         <View style={styles.actionSection}>
           <TouchableOpacity style={styles.readButton} onPress={handleReadNow} activeOpacity={0.8}>
             <Text style={styles.readButtonIcon}>▶</Text>
-            <Text style={styles.readButtonText}>
-              {lastChapter
-                ? `Tiếp tục: C.${lastChapter.chapterNumber || lastChapter.title}`
-                : lastChapterId
-                  ? 'Đang tải...'
-                  : 'Đọc ngay'}
-            </Text>
+            <Text style={styles.readButtonText}>{readButtonLabel}</Text>
           </TouchableOpacity>
-
           <TouchableOpacity
             style={[styles.followButton, isLiked && styles.followedButton]}
             onPress={handleToggleFollow}
             activeOpacity={0.8}
           >
             <Text style={[styles.followButtonText, isLiked && styles.followedText]}>
-              {isLiked ? 'Đang theo dõi' : '+ Theo dõi'}
+              {isLiked ? t('story.detail.following') : t('story.detail.follow')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -505,498 +917,3 @@ export default function StoryDetail() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-  },
-  loadingText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginTop: 12,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-    backgroundColor: colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    zIndex: 10,
-  },
-  headerButton: {
-    padding: 12,
-  },
-  headerButtonText: {
-    fontSize: 32,
-    fontWeight: '300',
-    color: colors.text,
-    lineHeight: 32,
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    textAlign: 'start',
-    paddingHorizontal: 8,
-  },
-  bookmarkIcon: {
-    fontSize: 24,
-    color: colors.primary,
-  },
-  scrollView: {
-    flex: 1,
-    paddingBottom: 20,
-  },
-  heroSection: {
-    width: width,
-    height: 280,
-    position: 'relative',
-  },
-  coverImage: {
-    width: '100%',
-    height: '100%',
-    position: 'absolute',
-  },
-  heroOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-  },
-  heroContent: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    padding: 16,
-    paddingBottom: 24,
-  },
-  coverImageSmall: {
-    width: 120,
-    height: 170,
-    borderRadius: 12,
-    borderWidth: 3,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  heroInfo: {
-    flex: 1,
-    marginLeft: 16,
-    marginBottom: 8,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#ffffff',
-    marginBottom: 6,
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-  },
-  author: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
-    marginBottom: 8,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  ratingStars: {
-    fontSize: 16,
-    color: '#fbbf24',
-    marginRight: 4,
-  },
-  ratingValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#ffffff',
-  },
-  ratingDivider: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.5)',
-    marginHorizontal: 8,
-  },
-  viewsValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#ffffff',
-  },
-  viewsLabel: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.8)',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: colors.background,
-    marginTop: -20,
-    marginHorizontal: 16,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 5,
-  },
-  statCard: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  statValue: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.primary,
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: colors.textMuted,
-  },
-  genresSection: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  genresRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  genreBadge: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: colors.secondary,
-  },
-  genreText: {
-    fontSize: 13,
-    color: colors.primary,
-    fontWeight: '500',
-  },
-  tabsContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    marginTop: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  tabActive: {
-    borderBottomWidth: 2,
-    borderBottomColor: colors.primary,
-  },
-  tabText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  tabTextActive: {
-    color: colors.primary,
-  },
-  tabContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-  },
-  reviewSection: {
-    paddingVertical: 20,
-    alignItems: 'center',
-  },
-  reviewTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  reviewPlaceholder: {
-    fontSize: 14,
-    color: colors.textMuted,
-  },
-  reviewHeader: {
-    marginBottom: 16,
-    paddingTop: 8,
-  },
-  reviewHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  reviewCount: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginLeft: 4,
-  },
-  reviewStar: {
-    fontSize: 16,
-    color: '#f59e0b',
-    marginLeft: 8,
-  },
-  writeReview: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    marginBottom: 16,
-    gap: 8,
-  },
-  writeReviewContent: {
-    flex: 1,
-  },
-  starRating: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  starIcon: {
-    fontSize: 24,
-    color: colors.border,
-    marginRight: 4,
-  },
-  starIconActive: {
-    color: '#f59e0b',
-  },
-  reviewInput: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: 12,
-    fontSize: 14,
-    color: colors.text,
-    maxHeight: 80,
-  },
-  sendButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  sendButtonText: {
-    color: colors.white,
-    fontWeight: '600',
-  },
-  reviewsList: {
-    marginTop: 8,
-  },
-  reviewItem: {
-    flexDirection: 'row',
-    marginBottom: 16,
-  },
-  reviewAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
-  },
-  reviewContent: {
-    flex: 1,
-  },
-  reviewHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  reviewUser: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  reviewDate: {
-    fontSize: 12,
-    color: colors.textMuted,
-  },
-  reviewStars: {
-    flexDirection: 'row',
-    marginBottom: 4,
-  },
-  reviewStarIcon: {
-    fontSize: 12,
-    color: colors.border,
-    marginRight: 2,
-  },
-  reviewStarActive: {
-    color: '#f59e0b',
-  },
-  reviewText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    lineHeight: 20,
-  },
-  overviewItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  overviewLabel: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    flex: 1,
-  },
-  overviewValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
-    flex: 2,
-    textAlign: 'right',
-  },
-  actionSection: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    paddingBottom: 34,
-    gap: 12,
-    backgroundColor: colors.background,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  readButton: {
-    flex: 1.5,
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  readButtonIcon: {
-    fontSize: 14,
-    color: colors.white,
-    marginRight: 8,
-  },
-  readButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.white,
-  },
-  followButton: {
-    flex: 1,
-    backgroundColor: colors.card,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  followButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  descriptionSection: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-  },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 10,
-  },
-  description: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    lineHeight: 22,
-  },
-  readMore: {
-    fontSize: 14,
-    color: colors.primary,
-    fontWeight: '600',
-    marginTop: 8,
-  },
-  chaptersSection: {
-    marginTop: 16,
-  },
-  chaptersHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  chapterCountBadge: {
-    backgroundColor: colors.secondary,
-    paddingHorizontal: 10,
-    paddingVertical: 2,
-    borderRadius: 10,
-    marginLeft: 8,
-  },
-  chapterCount: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.primary,
-  },
-  chaptersList: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  chapterItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  chapterLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  chapterNumberBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: colors.secondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  chapterNumber: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  chapterInfo: {
-    flex: 1,
-  },
-  chapterTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 2,
-  },
-  chapterTime: {
-    fontSize: 12,
-    color: colors.textMuted,
-  },
-  chapterRight: {
-    marginLeft: 8,
-  },
-  chapterArrow: {
-    fontSize: 20,
-    color: colors.textMuted,
-    fontWeight: '300',
-  },
-  bottomSpacer: {
-    height: 40,
-  },
-});

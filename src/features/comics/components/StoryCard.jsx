@@ -55,12 +55,13 @@ function makeVerticalStyles(colors) {
       width: 120,
       marginRight: 12,
       marginBottom: 12,
+      backgroundColor: colors.background,
     },
     image: {
       width: '100%',
       height: 150,
       borderRadius: 8,
-      backgroundColor: colors.border,
+      backgroundColor: colors.background,
     },
     content: {
       marginTop: 8,
@@ -98,12 +99,12 @@ function makeHorizontalStyles(colors) {
       marginBottom: 12,
       borderRadius: 8,
       overflow: 'hidden',
-      backgroundColor: colors.card,
+      backgroundColor: colors.background,
     },
     image: {
       width: 100,
       height: 120,
-      backgroundColor: colors.border,
+      backgroundColor: colors.background,
     },
     content: {
       flex: 1,

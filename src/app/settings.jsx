@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSettings } from '../features/settings/hooks';
+import { useNavigation } from '@react-navigation/native';
 
 function SectionHeader({ label, colors }) {
   return (
@@ -40,15 +41,15 @@ function OptionRow({ icon, label, onPress, right, isLast, colors }) {
 }
 
 export default function SettingsScreen() {
-  const router = useRouter();
+  const navigation = useNavigation();
   const { t } = useTranslation();
   const { theme, language, colors, setTheme, setLanguage } = useSettings();
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <View style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>{t('settings.title')}</Text>
@@ -62,6 +63,7 @@ export default function SettingsScreen() {
           <OptionRow
             icon="sunny-outline"
             label={t('settings.appearance.light')}
+            onPress={() => setTheme('light')}
             colors={colors}
             right={
               <Switch
@@ -75,6 +77,7 @@ export default function SettingsScreen() {
           <OptionRow
             icon="moon-outline"
             label={t('settings.appearance.dark')}
+            onPress={() => setTheme('dark')}
             isLast
             colors={colors}
             right={
@@ -116,7 +119,7 @@ export default function SettingsScreen() {
           />
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
