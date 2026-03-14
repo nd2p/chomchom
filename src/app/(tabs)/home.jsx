@@ -1,50 +1,16 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import SearchBar from '../../components/ui/SearchBar';
-import StoryCard from '../../features/comics/components/StoryCard';
-import { getRecommendedComics, getReadingHistory, getPopularComics } from '../../features/comics/api';
+import { getComics, getReadingHistory, getGenres } from '../../features/comics/api';
 import { apiBaseURL } from '../../services/api/axios';
 import { useAuth } from '../../features/auth/hooks';
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  searchBarWrapper: {
-    backgroundColor: '#ffffff',
-    zIndex: 10,
-  },
-  scrollContent: {
-    paddingBottom: 80,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.primary,
-    marginBottom: 12,
-    marginTop: 20,
-    paddingHorizontal: 16,
-  },
-  horizontalScroll: {
-    marginBottom: 20,
-    paddingHorizontal: 16,
-  },
-  listContent: {
-    backgroundColor: '#ffffff',
-    borderRadius: 8,
-    marginHorizontal: 16,
-  },
-  emptyMessage: {
-    textAlign: 'center',
-    color: colors.textSecondary,
-    fontSize: 14,
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-  },
-});
+import FilterModal from '../../features/comics/components/FilterModal';
+import RecommendedSection from '../../features/comics/components/RecommendedSection';
+import RecentlyReadSection from '../../features/comics/components/RecentlyReadSection';
+import MainComicList from '../../features/comics/components/MainComicList';
 
 export default function Home() {
   const navigation = useNavigation();
@@ -53,6 +19,24 @@ export default function Home() {
   const [recommendedComics, setRecommendedComics] = useState([]);
   const [recentlyRead, setRecentlyRead] = useState([]);
   const [popularComics, setPopularComics] = useState([]);
+  const [genres, setGenres] = useState([]);
+  const [genresLoading, setGenresLoading] = useState(false);
+  const [showGenreModal, setShowGenreModal] = useState(false);
+  const [genrePressed, setGenrePressed] = useState(false);
+
+  // Filter states
+  const [selectedStatus, setSelectedStatus] = useState('all'); // all, completed, ongoing
+  const [selectedSort, setSelectedSort] = useState('latest'); // latest, viewsDesc
+  const [selectedGenres, setSelectedGenres] = useState([]); // array of IDs
+
+  const [isFiltered, setIsFiltered] = useState(false);
+  const [filteredComics, setFilteredComics] = useState([]);
+  const [filterPage, setFilterPage] = useState(1);
+  const [hasMoreFilters, setHasMoreFilters] = useState(true);
+  const [isLoadingMoreFilters, setIsLoadingMoreFilters] = useState(false);
+
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const flatListRef = useRef(null);
 
   const getComicKey = (item, index) => {
     return String(item?.id ?? item?._id ?? item?.slug ?? item?.title ?? `comic-${index}`);
@@ -61,7 +45,7 @@ export default function Home() {
   useEffect(() => {
     const fetchComics = async () => {
       try {
-        const res = await getRecommendedComics(1);
+        const res = await getComics({ sort: 'viewsDesc', page: 1 });
         const comics = res?.comics;
         const normalizedComics = Array.isArray(comics)
           ? comics.map((comic) => ({
@@ -89,7 +73,7 @@ export default function Home() {
   useEffect(() => {
     const fetchPopular = async () => {
       try {
-        const res = await getPopularComics(1);
+        const res = await getComics({ sort: 'likesDesc', page: 1 });
         const comics = res?.comics;
         const normalized = Array.isArray(comics)
           ? comics.map((comic) => ({
@@ -140,67 +124,142 @@ export default function Home() {
     fetchReadingHistory();
   }, [isAuthenticated]);
 
+  const handleApplyFilters = async () => {
+    setShowGenreModal(false);
+    try {
+      const params = {
+        page: 1,
+        sort: selectedSort,
+      };
+
+      if (selectedStatus !== 'all') {
+        params.status = selectedStatus;
+      }
+
+      if (selectedGenres.length > 0) {
+        params.genres = selectedGenres.join(',');
+      }
+
+      const res = await getComics(params);
+      const comics = res?.comics;
+      const normalized = Array.isArray(comics)
+        ? comics.map((comic) => ({
+          id: comic?._id,
+          title: comic?.title || 'N/A',
+          author: comic?.author || 'N/A',
+          cover: comic?.coverImage,
+          chapters: comic?.totalChapters,
+          views: comic?.views,
+        }))
+        : [];
+      setFilteredComics(normalized);
+      setIsFiltered(true);
+      setFilterPage(1);
+      setHasMoreFilters(normalized.length > 0);
+    } catch (error) {
+      console.log('Failed to apply filters', error);
+    }
+  };
+
+  const handleClearFilters = () => {
+    setSelectedStatus('all');
+    setSelectedSort('latest');
+    setSelectedGenres([]);
+    setIsFiltered(false);
+    setFilteredComics([]);
+    setFilterPage(1);
+    setHasMoreFilters(true);
+    setIsLoadingMoreFilters(false);
+  };
+
+  const loadMoreFilters = async () => {
+    if (isLoadingMoreFilters || !hasMoreFilters || !isFiltered) return;
+
+    setIsLoadingMoreFilters(true);
+    try {
+      const nextPage = filterPage + 1;
+      const params = {
+        page: nextPage,
+        sort: selectedSort,
+      };
+
+      if (selectedStatus !== 'all') {
+        params.status = selectedStatus;
+      }
+
+      if (selectedGenres.length > 0) {
+        params.genres = selectedGenres.join(',');
+      }
+
+      const res = await getComics(params);
+      const comics = res?.comics;
+      const normalized = Array.isArray(comics)
+        ? comics.map((comic) => ({
+          id: comic?._id,
+          title: comic?.title || 'N/A',
+          author: comic?.author || 'N/A',
+          cover: comic?.coverImage,
+          chapters: comic?.totalChapters,
+          views: comic?.views,
+        }))
+        : [];
+
+      if (normalized.length > 0) {
+        setFilteredComics((prev) => {
+          const existingIds = new Set(prev.map((c) => c.id));
+          const uniqueNewComics = normalized.filter((c) => !existingIds.has(c.id));
+          return [...prev, ...uniqueNewComics];
+        });
+        setFilterPage(nextPage);
+      } else {
+        setHasMoreFilters(false);
+      }
+    } catch (error) {
+      console.log('Failed to load more filters', error);
+    } finally {
+      setIsLoadingMoreFilters(false);
+    }
+  };
+
+  const getFilterTitle = () => {
+    const statusMap = {
+      all: '',
+      completed: 'hoàn thành',
+      ongoing: 'đang ra',
+    };
+    const sortMap = {
+      latest: 'ngày cập nhật',
+      viewsDesc: 'lượt xem',
+    };
+
+    const statusPart = statusMap[selectedStatus] ? ` ${statusMap[selectedStatus]}` : '';
+    const genreNames = genres
+      .filter((g) => selectedGenres.includes(g._id))
+      .map((g) => g.name)
+      .join(', ');
+    const genrePart = genreNames ? ` có thể loại ${genreNames}` : '';
+    const sortPart = ` sắp xếp theo ${sortMap[selectedSort]}`;
+
+    return `Tất cả truyện${statusPart}${genrePart}${sortPart}`;
+  };
+
+  const handleScroll = (event) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    // Show button if scrolled more than ~2500px (approx 20 horizontal items at 125px each)
+    if (offsetY > 150) {
+      if (!showScrollTop) setShowScrollTop(true);
+    } else {
+      if (showScrollTop) setShowScrollTop(false);
+    }
+  };
+
+  const scrollToTop = () => {
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+  };
+
   const handleStoryPress = (storyId) => {
     navigation.navigate('StoryDetail', { id: storyId });
   };
-
-  const RecommendedSection = () => (
-    <>
-      <Text style={styles.sectionTitle}>Được Đề Xuất</Text>
-      <FlatList
-        horizontal
-        data={recommendedComics}
-        keyExtractor={getComicKey}
-        renderItem={({ item }) => (
-          <StoryCard
-            title={item.title}
-            author={item.author}
-            cover={item.cover}
-            chapters={item.chapters}
-            views={item.views}
-            onPress={() => handleStoryPress(String(item.id))}
-            variant="vertical"
-          />
-        )}
-        scrollEnabled={true}
-        showsHorizontalScrollIndicator={false}
-        style={styles.horizontalScroll}
-        nestedScrollEnabled={true}
-      />
-    </>
-  );
-
-  const RecentlyReadSection = () => (
-    <>
-      <Text style={styles.sectionTitle}>Đọc Gần Đây</Text>
-      {!isAuthenticated ? (
-        <Text style={styles.emptyMessage}>Hãy đăng nhập để xem tính năng này</Text>
-      ) : recentlyRead.length > 0 ? (
-        <FlatList
-          horizontal
-          data={recentlyRead}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={({ item }) => (
-            <StoryCard
-              title={item.title}
-              author={item.author}
-              cover={item.cover}
-              chapters={item.chapters}
-              views={item.views}
-              onPress={() => handleStoryPress(item.id)}
-              variant="vertical"
-            />
-          )}
-          scrollEnabled={true}
-          showsHorizontalScrollIndicator={false}
-          style={styles.horizontalScroll}
-          nestedScrollEnabled={true}
-        />
-      ) : (
-        <Text style={styles.emptyMessage}>Chưa có lịch sử đọc</Text>
-      )}
-    </>
-  );
 
   const PopularHeader = () => (
     <Text style={styles.sectionTitle}>Phổ Biến</Text>
@@ -208,8 +267,17 @@ export default function Home() {
 
   const ListHeader = () => (
     <>
-      <RecommendedSection />
-      <RecentlyReadSection />
+      <RecommendedSection
+        comics={recommendedComics}
+        onStoryPress={handleStoryPress}
+        getComicKey={getComicKey}
+      />
+      <RecentlyReadSection
+        comics={recentlyRead}
+        isAuthenticated={isAuthenticated}
+        onStoryPress={handleStoryPress}
+        getComicKey={getComicKey}
+      />
       <PopularHeader />
     </>
   );
@@ -217,34 +285,133 @@ export default function Home() {
   return (
     <View style={styles.container}>
       <View style={styles.searchBarWrapper}>
-        <SearchBar
-          placeholder="Tìm kiếm truyện..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
+        <View style={styles.searchBarFlex}>
+          <SearchBar
+            placeholder="Tìm kiếm truyện..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+        <TouchableOpacity
+          style={[
+            styles.genreBtn,
+            (genrePressed || showGenreModal) && { backgroundColor: colors.primary },
+          ]}
+          onPressIn={() => setGenrePressed(true)}
+          onPressOut={() => setGenrePressed(false)}
+          onPress={async () => {
+            setShowGenreModal(true);
+            if (genres.length === 0) {
+              setGenresLoading(true);
+              try {
+                const res = await getGenres();
+                const list = Array.isArray(res)
+                  ? res
+                  : Array.isArray(res?.genres)
+                    ? res.genres
+                    : [];
+                setGenres(list);
+              } catch (e) {
+                console.log('Failed to fetch genres', e);
+              } finally {
+                setGenresLoading(false);
+              }
+            }
+          }}
+          activeOpacity={1}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <Ionicons name="list" size={20} color={(genrePressed || showGenreModal) ? '#fff' : colors.primary} />
+        </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={popularComics}
-        keyExtractor={getComicKey}
-        renderItem={({ item }) => (
-          <View style={styles.listContent}>
-            <StoryCard
-              title={item.title}
-              author={item.author}
-              cover={item.cover}
-              chapters={item.chapters}
-              views={item.views}
-              onPress={() => handleStoryPress(String(item.id))}
-              variant="horizontal"
-            />
-          </View>
-        )}
-        ListHeaderComponent={ListHeader}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        nestedScrollEnabled={true}
+      <FilterModal
+        visible={showGenreModal}
+        onClose={() => setShowGenreModal(false)}
+        genres={genres}
+        genresLoading={genresLoading}
+        selectedStatus={selectedStatus}
+        setSelectedStatus={setSelectedStatus}
+        selectedSort={selectedSort}
+        setSelectedSort={setSelectedSort}
+        selectedGenres={selectedGenres}
+        setSelectedGenres={setSelectedGenres}
+        onApply={handleApplyFilters}
       />
+
+      <MainComicList
+        comics={isFiltered ? filteredComics : popularComics}
+        isFiltered={isFiltered}
+        filterTitle={getFilterTitle()}
+        onClearFilters={handleClearFilters}
+        onStoryPress={handleStoryPress}
+        ListHeaderComponent={<ListHeader />}
+        getComicKey={getComicKey}
+        onEndReached={loadMoreFilters}
+        isLoadingMore={isLoadingMoreFilters}
+        onScroll={handleScroll}
+        flatListRef={flatListRef}
+      />
+
+      {showScrollTop && (
+        <TouchableOpacity
+          style={styles.scrollTopBtn}
+          onPress={scrollToTop}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="arrow-up" size={24} color="#ffffff" />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  searchBarWrapper: {
+    backgroundColor: '#ffffff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingRight: 10,
+    zIndex: 10,
+    gap: 5
+  },
+  searchBarFlex: {
+    flex: 1,
+  },
+  genreBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.primary,
+    marginBottom: 12,
+    marginTop: 20,
+    paddingHorizontal: 16,
+  },
+  scrollTopBtn: {
+    position: 'absolute',
+    right: 20,
+    bottom: 100,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+});
