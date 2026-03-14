@@ -1,4 +1,4 @@
-export default {
+﻿export default {
   common: {
     loading: 'Loading...',
     error: 'Error',
@@ -57,6 +57,9 @@ export default {
     recentlyRead: 'Recently Read',
     popular: 'Popular',
     loginRequired: 'Sign in to see this feature',
+    loginRequiredPrefix: '',
+    loginRequiredLink: 'Sign in',
+    loginRequiredSuffix: ' to see this feature',
     noHistory: 'No reading history yet',
     goBack: 'Go Back',
     filter: {
@@ -190,3 +193,5 @@ export default {
     profile: 'Profile',
   },
 };
+
+

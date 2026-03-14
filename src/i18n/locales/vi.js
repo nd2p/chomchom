@@ -1,4 +1,4 @@
-export default {
+﻿export default {
   common: {
     loading: 'Đang tải...',
     error: 'Lỗi',
@@ -57,6 +57,9 @@ export default {
     recentlyRead: 'Đọc Gần Đây',
     popular: 'Phổ Biến',
     loginRequired: 'Hãy đăng nhập để xem tính năng này',
+    loginRequiredPrefix: 'Hãy ',
+    loginRequiredLink: 'đăng nhập',
+    loginRequiredSuffix: ' để xem tính năng này',
     noHistory: 'Chưa có lịch sử đọc',
     goBack: 'Quay lại',
     filter: {
@@ -190,3 +193,4 @@ export default {
     profile: 'Hồ sơ',
   },
 };
+

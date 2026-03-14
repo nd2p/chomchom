@@ -4,6 +4,7 @@ import { TabView, SceneMap } from 'react-native-tab-view';
 import { createStackNavigator } from '@react-navigation/stack';
 import { colors } from '../theme/colors';
 import BottomNavBar from '../components/BottomNavBar';
+import { TabNavigationProvider } from './tabContext';
 import Home from '../app/(tabs)/home';
 import Bookmarks from '../app/(tabs)/bookmarks';
 import Profile from '../app/(tabs)/profile';
@@ -43,18 +44,25 @@ const TabNavigator = () => {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <TabView
-        navigationState={{ index, routes }}
-        renderScene={TabRenderScene}
-        onIndexChange={setIndex}
-        initialLayout={{ width: layout.width }}
-        swipeEnabled={false}
-        removeClippedSubviews={true}
-        renderTabBar={() => null}
-      />
-      <BottomNavBar navigation={navigation} active={currentRoute} />
-    </View>
+    <TabNavigationProvider
+      value={{
+        active: currentRoute,
+        navigateTab: handleNavigation,
+      }}
+    >
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <TabView
+          navigationState={{ index, routes }}
+          renderScene={TabRenderScene}
+          onIndexChange={setIndex}
+          initialLayout={{ width: layout.width }}
+          swipeEnabled={false}
+          removeClippedSubviews={true}
+          renderTabBar={() => null}
+        />
+        <BottomNavBar navigation={navigation} active={currentRoute} />
+      </View>
+    </TabNavigationProvider>
   );
 };
 

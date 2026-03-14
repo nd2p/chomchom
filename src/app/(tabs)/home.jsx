@@ -181,15 +181,23 @@ export default function Home() {
     const fetchReadingHistory = async () => {
       try {
         const res = await getReadingHistory(1);
-        const histories = res?.histories;
+        const histories = Array.isArray(res)
+          ? res
+          : Array.isArray(res?.histories)
+            ? res.histories
+            : Array.isArray(res?.data)
+              ? res.data
+              : Array.isArray(res?.data?.histories)
+                ? res.data.histories
+                : [];
         const normalizedHistories = Array.isArray(histories)
           ? histories.map((history) => ({
-            id: history?._id,
-            title: history?.comic?.title || naText,
-            author: history?.comic?.author || naText,
-            cover: history?.comic?.coverImage,
-            chapters: history?.comic?.totalChapters,
-            views: history?.comic?.views,
+            id: history?._id ?? history?.comic?._id ?? history?.id,
+            title: history?.comic?.title ?? history?.title ?? naText,
+            author: history?.comic?.author ?? history?.author ?? naText,
+            cover: history?.comic?.coverImage ?? history?.coverImage ?? history?.cover,
+            chapters: history?.comic?.totalChapters ?? history?.totalChapters,
+            views: history?.comic?.views ?? history?.views,
           }))
           : [];
 
