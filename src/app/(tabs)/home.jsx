@@ -4,8 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import SearchBar from '../../components/ui/SearchBar';
 import StoryCard from '../../features/comics/components/StoryCard';
-import { popularStories } from '../../utils/mockStories';
-import { getRecommendedComics, getReadingHistory } from '../../features/comics/api';
+import { getRecommendedComics, getReadingHistory, getPopularComics } from '../../features/comics/api';
 import { apiBaseURL } from '../../services/api/axios';
 import { useAuth } from '../../features/auth/hooks';
 
@@ -34,11 +33,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   listContent: {
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#ffffff',
     borderRadius: 8,
-    padding: 12,
     marginHorizontal: 16,
-    marginBottom: 8,
   },
   emptyMessage: {
     textAlign: 'center',
@@ -55,6 +52,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [recommendedComics, setRecommendedComics] = useState([]);
   const [recentlyRead, setRecentlyRead] = useState([]);
+  const [popularComics, setPopularComics] = useState([]);
 
   const getComicKey = (item, index) => {
     return String(item?.id ?? item?._id ?? item?.slug ?? item?.title ?? `comic-${index}`);
@@ -86,6 +84,30 @@ export default function Home() {
     };
 
     fetchComics();
+  }, []);
+
+  useEffect(() => {
+    const fetchPopular = async () => {
+      try {
+        const res = await getPopularComics(1);
+        const comics = res?.comics;
+        const normalized = Array.isArray(comics)
+          ? comics.map((comic) => ({
+            id: comic?._id,
+            title: comic?.title || 'N/A',
+            author: comic?.author || 'N/A',
+            cover: comic?.coverImage,
+            chapters: comic?.totalChapters,
+            views: comic?.views,
+          }))
+          : [];
+        setPopularComics(normalized);
+      } catch (error) {
+        console.log('Failed to fetch popular comics', error);
+      }
+    };
+
+    fetchPopular();
   }, []);
 
   useEffect(() => {
@@ -122,7 +144,6 @@ export default function Home() {
     navigation.navigate('StoryDetail', { id: storyId });
   };
 
-  // Horizontal section rendered as a single list item inside the outer FlatList
   const RecommendedSection = () => (
     <>
       <Text style={styles.sectionTitle}>Được Đề Xuất</Text>
@@ -185,7 +206,6 @@ export default function Home() {
     <Text style={styles.sectionTitle}>Phổ Biến</Text>
   );
 
-  // The header contains everything above the popular list
   const ListHeader = () => (
     <>
       <RecommendedSection />
@@ -196,7 +216,6 @@ export default function Home() {
 
   return (
     <View style={styles.container}>
-      {/* Sticky Search Bar */}
       <View style={styles.searchBarWrapper}>
         <SearchBar
           placeholder="Tìm kiếm truyện..."
@@ -205,10 +224,9 @@ export default function Home() {
         />
       </View>
 
-      {/* Single outer FlatList — eliminates ScrollView + FlatList nesting */}
       <FlatList
-        data={popularStories}
-        keyExtractor={(item) => item.id}
+        data={popularComics}
+        keyExtractor={getComicKey}
         renderItem={({ item }) => (
           <View style={styles.listContent}>
             <StoryCard
@@ -216,7 +234,8 @@ export default function Home() {
               author={item.author}
               cover={item.cover}
               chapters={item.chapters}
-              onPress={() => handleStoryPress(item.id)}
+              views={item.views}
+              onPress={() => handleStoryPress(String(item.id))}
               variant="horizontal"
             />
           </View>

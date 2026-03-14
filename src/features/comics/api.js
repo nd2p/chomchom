@@ -9,6 +9,14 @@ export async function getRecommendedComics(page = 1) {
   return response.data;
 }
 
+export async function getPopularComics(page = 1) {
+  const response = await axiosInstance.get(endpoints.comics, {
+    params: { sort: 'likesDesc', page },
+  });
+
+  return response.data;
+}
+
 export async function getReadingHistory(page = 1) {
   const response = await axiosInstance.get(endpoints.readingHistory, {
     requiresAuth: true,

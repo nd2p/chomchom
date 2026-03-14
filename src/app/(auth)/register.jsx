@@ -312,8 +312,7 @@ export default function RegisterScreen({ onSwitchMode }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.primary,
-    paddingTop: 50,
+    paddingTop: 40,
     marginVertical: -10,
     marginBottom: 80,
   },

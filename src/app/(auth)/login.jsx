@@ -47,8 +47,8 @@ export default function LoginScreen({ onSwitchMode }) {
       setIsLoading(true);
       const res = await authApi.login({ email, password });
       login(res.user, res.token);
-    } catch {
-      Alert.alert('Lỗi', 'Đăng nhập thất bại. Vui lòng thử lại.');
+    } catch (error) {
+      Alert.alert('Lỗi', error.response.data.message);
     } finally {
       setIsLoading(false);
     }
@@ -212,8 +212,7 @@ export default function LoginScreen({ onSwitchMode }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.primary,
-    paddingTop: 50,
+    paddingTop: 40,
     marginVertical: -10,
   },
   tagline: {
