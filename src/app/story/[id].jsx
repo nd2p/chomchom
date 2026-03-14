@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
-import { getComicDetails } from '../../services/api/comics';
+import { getComicDetails } from '../../features/comics/api';
 
 const { width } = Dimensions.get('window');
 

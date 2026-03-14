@@ -12,55 +12,57 @@ import {
   TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Link } from 'expo-router';
+
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { useForm, Controller } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
 import { useAuth } from '../../features/auth/hooks';
 import { authApi } from '../../features/auth/api';
 import { colors } from '../../theme/colors';
 
-export default function RegisterScreen() {
-  const { login } = useAuth();
+const schema = yup.object({
+  username: yup.string().trim().required('Tên không được để trống').min(3, 'Tên tối thiểu 3 ký tự'),
+  email: yup.string().trim().required('Email không được để trống').email('Email không hợp lệ'),
+  password: yup
+    .string()
+    .required('Mật khẩu không được để trống')
+    .min(6, 'Mật khẩu ít nhất 6 ký tự'),
+  confirmPassword: yup
+    .string()
+    .required('Vui lòng xác nhận mật khẩu')
+    .oneOf([yup.ref('password')], 'Mật khẩu không khớp'),
+});
 
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+export default function RegisterScreen({ onSwitchMode }) {
+  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [errors, setErrors] = useState({});
 
-  const busy = isLoading || isGoogleLoading;
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    resolver: yupResolver(schema),
+    defaultValues: { username: '', email: '', password: '', confirmPassword: '' },
+  });
 
-  function clearError(field) {
-    setErrors((e) => ({ ...e, [field]: undefined }));
-  }
+  const busy = isSubmitting || isGoogleLoading;
 
-  function validate() {
-    const next = {};
-    if (!name.trim()) next.name = 'Tên không được để trống';
-    if (!email.trim()) next.email = 'Email không được để trống';
-    else if (!/^\S+@\S+\.\S+$/.test(email)) next.email = 'Email không hợp lệ';
-    if (!password) next.password = 'Mật khẩu không được để trống';
-    else if (password.length < 6) next.password = 'Mật khẩu ít nhất 6 ký tự';
-    if (!confirmPassword) next.confirmPassword = 'Vui lòng xác nhận mật khẩu';
-    else if (confirmPassword !== password) next.confirmPassword = 'Mật khẩu không khớp';
-    setErrors(next);
-    return Object.keys(next).length === 0;
-  }
-
-  async function handleRegister() {
-    if (!validate()) return;
+  async function onSubmit(values) {
     try {
-      setIsLoading(true);
-      const res = await authApi.register({ name: name.trim(), email, password });
+      const res = await authApi.register({
+        username: values.username.trim(),
+        email: values.email.trim(),
+        password: values.password,
+      });
       login(res.user, res.token);
-    } catch {
-      Alert.alert('Lỗi', 'Đăng ký thất bại. Vui lòng thử lại.');
-    } finally {
-      setIsLoading(false);
+    } catch (err) {
+      const message = err?.response?.data?.message ?? 'Đăng ký thất bại. Vui lòng thử lại.';
+      Alert.alert('Lỗi', message);
     }
   }
 
@@ -77,17 +79,9 @@ export default function RegisterScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <StatusBar style="light" />
 
-      {/* Branding header */}
-      <View style={styles.header}>
-        <View style={styles.logoCircle}>
-          <Text style={styles.logoLetter}>C</Text>
-        </View>
-        <Text style={styles.appName}>ChomChom</Text>
-        <Text style={styles.tagline}>Tạo tài khoản miễn phí</Text>
-      </View>
 
       {/* White card */}
       <KeyboardAvoidingView
@@ -103,149 +97,170 @@ export default function RegisterScreen() {
             <Text style={styles.title}>Tạo tài khoản</Text>
             <Text style={styles.subtitle}>Tham gia cộng đồng đọc truyện hôm nay</Text>
 
-            {/* Name */}
+            {/* Username */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Họ và tên</Text>
-              <View style={[styles.inputWrapper, errors.name ? styles.inputError : undefined]}>
-                <Ionicons
-                  name="person-outline"
-                  size={20}
-                  color={errors.name ? colors.error : colors.textMuted}
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Nguyễn Văn A"
-                  placeholderTextColor={colors.textMuted}
-                  value={name}
-                  onChangeText={(t) => {
-                    setName(t);
-                    clearError('name');
-                  }}
-                  autoCorrect={false}
-                  editable={!busy}
-                />
-              </View>
-              {errors.name ? <Text style={styles.errorText}>{errors.name}</Text> : null}
+              <Text style={styles.label}>Tên người dùng</Text>
+              <Controller
+                control={control}
+                name="username"
+                render={({ field: { onChange, value } }) => (
+                  <View
+                    style={[styles.inputWrapper, errors.username ? styles.inputError : undefined]}
+                  >
+                    <Ionicons
+                      name="person-outline"
+                      size={20}
+                      color={errors.username ? colors.error : colors.textMuted}
+                      style={styles.inputIcon}
+                    />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="nguyenvana"
+                      placeholderTextColor={colors.textMuted}
+                      value={value}
+                      onChangeText={onChange}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      editable={!busy}
+                    />
+                  </View>
+                )}
+              />
+              {errors.username ? (
+                <Text style={styles.errorText}>{errors.username.message}</Text>
+              ) : null}
             </View>
 
             {/* Email */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Email</Text>
-              <View style={[styles.inputWrapper, errors.email ? styles.inputError : undefined]}>
-                <Ionicons
-                  name="mail-outline"
-                  size={20}
-                  color={errors.email ? colors.error : colors.textMuted}
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="example@email.com"
-                  placeholderTextColor={colors.textMuted}
-                  value={email}
-                  onChangeText={(t) => {
-                    setEmail(t);
-                    clearError('email');
-                  }}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={!busy}
-                />
-              </View>
-              {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
+              <Controller
+                control={control}
+                name="email"
+                render={({ field: { onChange, value } }) => (
+                  <View style={[styles.inputWrapper, errors.email ? styles.inputError : undefined]}>
+                    <Ionicons
+                      name="mail-outline"
+                      size={20}
+                      color={errors.email ? colors.error : colors.textMuted}
+                      style={styles.inputIcon}
+                    />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="example@email.com"
+                      placeholderTextColor={colors.textMuted}
+                      value={value}
+                      onChangeText={onChange}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      editable={!busy}
+                    />
+                  </View>
+                )}
+              />
+              {errors.email ? <Text style={styles.errorText}>{errors.email.message}</Text> : null}
             </View>
 
             {/* Password */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Mật khẩu</Text>
-              <View style={[styles.inputWrapper, errors.password ? styles.inputError : undefined]}>
-                <Ionicons
-                  name="lock-closed-outline"
-                  size={20}
-                  color={errors.password ? colors.error : colors.textMuted}
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Ít nhất 6 ký tự"
-                  placeholderTextColor={colors.textMuted}
-                  value={password}
-                  onChangeText={(t) => {
-                    setPassword(t);
-                    clearError('password');
-                  }}
-                  secureTextEntry={!showPassword}
-                  editable={!busy}
-                />
-                <TouchableOpacity
-                  onPress={() => setShowPassword((v) => !v)}
-                  style={styles.eyeButton}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Ionicons
-                    name={showPassword ? 'eye-outline' : 'eye-off-outline'}
-                    size={20}
-                    color={colors.textMuted}
-                  />
-                </TouchableOpacity>
-              </View>
-              {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
+              <Controller
+                control={control}
+                name="password"
+                render={({ field: { onChange, value } }) => (
+                  <View
+                    style={[styles.inputWrapper, errors.password ? styles.inputError : undefined]}
+                  >
+                    <Ionicons
+                      name="lock-closed-outline"
+                      size={20}
+                      color={errors.password ? colors.error : colors.textMuted}
+                      style={styles.inputIcon}
+                    />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Ít nhất 6 ký tự"
+                      placeholderTextColor={colors.textMuted}
+                      value={value}
+                      onChangeText={onChange}
+                      secureTextEntry={!showPassword}
+                      editable={!busy}
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowPassword((v) => !v)}
+                      style={styles.eyeButton}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Ionicons
+                        name={showPassword ? 'eye-outline' : 'eye-off-outline'}
+                        size={20}
+                        color={colors.textMuted}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                )}
+              />
+              {errors.password ? (
+                <Text style={styles.errorText}>{errors.password.message}</Text>
+              ) : null}
             </View>
 
             {/* Confirm password */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Xác nhận mật khẩu</Text>
-              <View
-                style={[
-                  styles.inputWrapper,
-                  errors.confirmPassword ? styles.inputError : undefined,
-                ]}
-              >
-                <Ionicons
-                  name="shield-checkmark-outline"
-                  size={20}
-                  color={errors.confirmPassword ? colors.error : colors.textMuted}
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Nhập lại mật khẩu"
-                  placeholderTextColor={colors.textMuted}
-                  value={confirmPassword}
-                  onChangeText={(t) => {
-                    setConfirmPassword(t);
-                    clearError('confirmPassword');
-                  }}
-                  secureTextEntry={!showConfirm}
-                  editable={!busy}
-                />
-                <TouchableOpacity
-                  onPress={() => setShowConfirm((v) => !v)}
-                  style={styles.eyeButton}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Ionicons
-                    name={showConfirm ? 'eye-outline' : 'eye-off-outline'}
-                    size={20}
-                    color={colors.textMuted}
-                  />
-                </TouchableOpacity>
-              </View>
+              <Controller
+                control={control}
+                name="confirmPassword"
+                render={({ field: { onChange, value } }) => (
+                  <View
+                    style={[
+                      styles.inputWrapper,
+                      errors.confirmPassword ? styles.inputError : undefined,
+                    ]}
+                  >
+                    <Ionicons
+                      name="shield-checkmark-outline"
+                      size={20}
+                      color={errors.confirmPassword ? colors.error : colors.textMuted}
+                      style={styles.inputIcon}
+                    />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Nhập lại mật khẩu"
+                      placeholderTextColor={colors.textMuted}
+                      value={value}
+                      onChangeText={onChange}
+                      secureTextEntry={!showConfirm}
+                      editable={!busy}
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowConfirm((v) => !v)}
+                      style={styles.eyeButton}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Ionicons
+                        name={showConfirm ? 'eye-outline' : 'eye-off-outline'}
+                        size={20}
+                        color={colors.textMuted}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                )}
+              />
               {errors.confirmPassword ? (
-                <Text style={styles.errorText}>{errors.confirmPassword}</Text>
+                <Text style={styles.errorText}>{errors.confirmPassword.message}</Text>
               ) : null}
             </View>
 
             {/* Register button */}
             <TouchableOpacity
               style={[styles.primaryButton, busy && styles.buttonDisabled]}
-              onPress={handleRegister}
+              onPress={handleSubmit(onSubmit)}
               disabled={busy}
               activeOpacity={0.85}
             >
-              {isLoading ? (
+              {isSubmitting ? (
                 <ActivityIndicator color={colors.white} />
               ) : (
                 <Text style={styles.primaryButtonText}>Tạo tài khoản</Text>
@@ -279,14 +294,14 @@ export default function RegisterScreen() {
             </TouchableOpacity>
 
             {/* Login link */}
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>Đã có tài khoản? </Text>
-              <Link href="/(auth)/login" asChild>
-                <TouchableOpacity disabled={busy}>
+            {onSwitchMode && (
+              <View style={styles.footer}>
+                <Text style={styles.footerText}>Đã có tài khoản? </Text>
+                <TouchableOpacity onPress={() => onSwitchMode('login')} disabled={busy}>
                   <Text style={styles.footerLink}>Đăng nhập</Text>
                 </TouchableOpacity>
-              </Link>
-            </View>
+              </View>
+            )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -298,6 +313,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.primary,
+    paddingTop: 50,
+    marginVertical: -10,
+    marginBottom: 80,
   },
   header: {
     alignItems: 'center',

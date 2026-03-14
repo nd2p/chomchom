@@ -1,3 +1,8 @@
 export const endpoints = {
-  stories: '/stories',
+  comics: '/api/comics',
+  auth: {
+    register: '/api/auth/register',
+    login: '/api/auth/login',
+  },
+  readingHistory: '/api/reading-history',
 };
