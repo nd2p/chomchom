@@ -5,6 +5,7 @@ export default {
     cancel: 'Cancel',
     confirm: 'Confirm',
     or: 'or',
+    na: 'N/A',
   },
   auth: {
     login: {
@@ -58,6 +59,19 @@ export default {
     loginRequired: 'Sign in to see this feature',
     noHistory: 'No reading history yet',
     goBack: 'Go Back',
+    filter: {
+      base: 'All comics',
+      status: {
+        completed: 'completed',
+        ongoing: 'ongoing',
+      },
+      sort: {
+        latest: 'latest update',
+        viewsDesc: 'most viewed',
+      },
+      genrePart: ' with genres {{genres}}',
+      sortPart: ' sorted by {{sort}}',
+    },
   },
   bookmarks: {
     title: 'My Library',
@@ -130,6 +144,30 @@ export default {
     status: {
       completed: 'Completed',
       ongoing: 'Ongoing',
+    },
+    detail: {
+      defaultTitle: 'Comic Detail',
+      reads: 'reads',
+      status: 'Status',
+      updated: 'Updated',
+      tabChapter: 'Chapter',
+      author: 'Author',
+      genre: 'Genre',
+      description: 'Description',
+      updating: 'Updating...',
+      expand: 'Show more',
+      collapse: 'Show less',
+      readNow: 'Read Now',
+      readContinue: 'Continue: Ch.{{chapter}}',
+      following: 'Following',
+      follow: '+ Follow',
+      followLoginTitle: 'Login Required',
+      followLoginMessage: 'You need to log in to follow this comic.',
+      followError: 'Unable to change follow status right now.',
+      reviews: 'Reviews',
+      reviewPlaceholder: 'Write a review...',
+      send: 'Send',
+      noReviews: 'No reviews yet',
     },
   },
   settings: {
