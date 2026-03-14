@@ -12,19 +12,16 @@ import {
   Alert,
   StatusBar,
 } from 'react-native';
-import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { likeComic } from '../../features/bookmarks/api';
-import {
-  getComicDetails,
-  getComicReviews,
-  createReview,
-} from '../../services/api/comics';
+import { useAuth } from '../../features/auth/hooks';
+import { getReadingHistory, likeComic } from '../../features/bookmarks/api';
+import { getComicDetails, getComicReviews, createReview } from '../../services/api/comics';
 
 const { width } = Dimensions.get('window');
 
 export default function StoryDetail() {
+  const { isAuthenticated } = useAuth();
   const navigation = useNavigation();
   const route = useRoute();
   const comicId = route.params?.id;
@@ -43,22 +40,6 @@ export default function StoryDetail() {
     if (!lastChapterId || chapters.length === 0) return null;
     return chapters.find((chap) => chap._id === lastChapterId);
   }, [lastChapterId, chapters]);
-
-  // Chạy mỗi khi màn hình đó hiển thị trước mắt người dùng.
-  useFocusEffect(
-    React.useCallback(() => {
-      const updateUI = async () => {
-        const key = `history_${comicId}`;
-        const saved = await AsyncStorage.getItem(key);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          setLastChapterId(parsed.chapterId);
-        }
-      };
-
-      if (comicId) updateUI();
-    }, [comicId])
-  );
 
   // Helper to normalize status from API
   const getStatusText = (status) => {
@@ -93,6 +74,7 @@ export default function StoryDetail() {
         setComic(comicData);
         setChapters(comicData?.chapters || []);
         setReviews(reviewsRes?.comments || []);
+        setIsLiked(comicRes?.isLiked || false);
       } catch (error) {
         console.log('Failed to fetch comic details', error);
       } finally {
@@ -110,21 +92,22 @@ export default function StoryDetail() {
   useEffect(() => {
     const loadHistory = async () => {
       try {
-        const data = await AsyncStorage.getItem(`history_${comicId}`);
+        if (!isAuthenticated || !comicId) return;
 
-        if (data) {
-          const history = JSON.parse(data);
-          setLastChapterId(history.chapterId);
+        const historyList = await getReadingHistory();
+
+        const history = historyList.find((item) => item?.comic?._id === comicId);
+
+        if (history?.chapter?._id) {
+          setLastChapterId(history.chapter._id);
         }
       } catch (error) {
         console.log('Load history error:', error);
       }
     };
 
-    if (comicId) {
-      loadHistory();
-    }
-  }, [comicId]);
+    loadHistory();
+  }, [comicId, isAuthenticated]);
 
   const handleBookmark = () => {
     // Handle bookmark
@@ -149,20 +132,19 @@ export default function StoryDetail() {
   };
 
   const handleToggleFollow = async () => {
+    if (!isAuthenticated) {
+      Alert.alert('Yêu cầu đăng nhập', 'Bạn cần đăng nhập để theo dõi truyện này!');
+      return;
+    }
+
     try {
-      const token = await AsyncStorage.getItem('userToken');
-
-      if (!token) {
-        Alert.alert('Yêu cầu đăng nhập', 'Bạn cần đăng nhập để theo dõi truyện này!');
-        return;
-      }
-
-      setIsLiked(!isLiked);
+      setIsLiked((prev) => !prev);
 
       await likeComic(comicId);
     } catch (error) {
       console.log('Toggle follow error:', error);
-      setIsLiked(isLiked);
+      setIsLiked((prev) => !prev);
+
       Alert.alert('Lỗi', 'Không thể thay đổi trạng thái theo dõi lúc này.');
     }
   };

@@ -1,12 +1,12 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { FlatList, ActivityIndicator, View, Text, StyleSheet, Dimensions } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 
 import { getLikedComics } from '../../features/bookmarks/api';
 import StoryCard from '../../features/comics/components/StoryCard';
 import { useSettings } from '../../features/settings/hooks';
+import { useAuth } from '../../features/auth/hooks';
 
 const { width } = Dimensions.get('window');
 const columnWidth = (width - 32) / 2;
@@ -34,23 +34,6 @@ function makeStyles(colors) {
       textAlign: 'center',
       marginTop: 10,
     },
-    unlikeButton: {
-      position: 'absolute',
-      top: -5,
-      right: -5,
-      backgroundColor: colors.background,
-      width: 28,
-      height: 28,
-      borderRadius: 14,
-      justifyContent: 'center',
-      alignItems: 'center',
-      zIndex: 20,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.25,
-      shadowRadius: 3.84,
-      elevation: 5,
-    },
   });
 }
 
@@ -59,26 +42,29 @@ export default function FavoriteReading() {
   const { colors } = useSettings();
   const { t } = useTranslation();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { isAuthenticated } = useAuth();
 
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      if (!isAuthenticated) {
+        setData([]);
+        setLoading(false);
+        return;
+      }
+
+      loadData();
+    }, [isAuthenticated])
+  );
 
   const loadData = async () => {
     setLoading(true);
+
     try {
-      const token = await AsyncStorage.getItem('userToken');
-      if (token) {
-        setIsLoggedIn(true);
-        const res = await getLikedComics();
-        setData(res);
-      } else {
-        setIsLoggedIn(false);
-      }
+      const res = await getLikedComics();
+      setData(res || []);
     } catch (error) {
       console.log('Lỗi API truyện yêu thích:', error);
       setData([]);
@@ -96,7 +82,7 @@ export default function FavoriteReading() {
     );
   }
 
-  if (!isLoggedIn) {
+  if (!isAuthenticated) {
     return (
       <View style={styles.center}>
         <Text style={styles.messageText}>{t('favorites.loginRequired')}</Text>
@@ -111,13 +97,17 @@ export default function FavoriteReading() {
       keyExtractor={(item) => item._id}
       contentContainerStyle={{ padding: 10 }}
       columnWrapperStyle={styles.row}
+      initialNumToRender={6}
+      maxToRenderPerBatch={6}
+      windowSize={5}
+      removeClippedSubviews
       ListEmptyComponent={
         <View style={styles.center}>
           <Text style={styles.messageText}>{t('favorites.empty')}</Text>
         </View>
       }
       renderItem={({ item }) => {
-        const comic = item.comic;
+        const comic = item?.comic;
         if (!comic) return null;
 
         return (
