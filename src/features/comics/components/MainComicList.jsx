@@ -9,6 +9,7 @@ const MainComicList = ({
   isFiltered,
   filterTitle,
   onClearFilters,
+  onStoryPress,
   ListHeaderComponent,
   getComicKey,
   onEndReached,
