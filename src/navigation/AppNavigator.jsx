@@ -8,6 +8,7 @@ import Home from '../app/(tabs)/home';
 import Bookmarks from '../app/(tabs)/bookmarks';
 import Profile from '../app/(tabs)/profile';
 import StoryDetail from '../app/story/[id]';
+import ChapterDetail from '../app/story/chapter/[id]';
 
 const Stack = createStackNavigator();
 
@@ -61,6 +62,7 @@ const AppNavigator = () => {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="MainTabs" component={TabNavigator} />
       <Stack.Screen name="StoryDetail" component={StoryDetail} />
+      <Stack.Screen name="ChapterDetail" component={ChapterDetail} />
     </Stack.Navigator>
   );
 };
