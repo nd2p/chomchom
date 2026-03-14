@@ -1,20 +1,96 @@
-import React, { useEffect, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../theme/colors';
 import SearchBar from '../../components/ui/SearchBar';
 import { getComics, getReadingHistory, getGenres } from '../../features/comics/api';
 import { apiBaseURL } from '../../services/api/axios';
 import { useAuth } from '../../features/auth/hooks';
+import { useSettings } from '../../features/settings/hooks';
 import FilterModal from '../../features/comics/components/FilterModal';
 import RecommendedSection from '../../features/comics/components/RecommendedSection';
 import RecentlyReadSection from '../../features/comics/components/RecentlyReadSection';
 import MainComicList from '../../features/comics/components/MainComicList';
 
+function makeStyles(colors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    searchBarWrapper: {
+      backgroundColor: colors.surface,
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingRight: 10,
+      zIndex: 10,
+      gap: 5,
+    },
+    searchBarFlex: {
+      flex: 1,
+    },
+    genreBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      backgroundColor: colors.secondary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    scrollContent: {
+      paddingBottom: 80,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.primary,
+      marginBottom: 12,
+      marginTop: 20,
+      paddingHorizontal: 16,
+    },
+    horizontalScroll: {
+      marginBottom: 20,
+      paddingHorizontal: 16,
+    },
+    listContent: {
+      backgroundColor: colors.card,
+      borderRadius: 8,
+      marginHorizontal: 16,
+    },
+    emptyMessage: {
+      textAlign: 'center',
+      color: colors.textSecondary,
+      fontSize: 14,
+      paddingVertical: 24,
+      paddingHorizontal: 16,
+    },
+    scrollTopBtn: {
+      position: 'absolute',
+      right: 20,
+      bottom: 100,
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      elevation: 5,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+    },
+  });
+}
+
 export default function Home() {
   const navigation = useNavigation();
   const { isAuthenticated } = useAuth();
+  const { colors } = useSettings();
+  const { t } = useTranslation();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [recommendedComics, setRecommendedComics] = useState([]);
   const [recentlyRead, setRecentlyRead] = useState([]);
@@ -25,9 +101,9 @@ export default function Home() {
   const [genrePressed, setGenrePressed] = useState(false);
 
   // Filter states
-  const [selectedStatus, setSelectedStatus] = useState('all'); // all, completed, ongoing
-  const [selectedSort, setSelectedSort] = useState('latest'); // latest, viewsDesc
-  const [selectedGenres, setSelectedGenres] = useState([]); // array of IDs
+  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedSort, setSelectedSort] = useState('latest');
+  const [selectedGenres, setSelectedGenres] = useState([]);
 
   const [isFiltered, setIsFiltered] = useState(false);
   const [filteredComics, setFilteredComics] = useState([]);
@@ -108,7 +184,7 @@ export default function Home() {
           ? histories.map((history) => ({
             id: history?._id,
             title: history?.comic?.title || 'N/A',
-            author: extractAuthorFromParentheses(history?.comic?.title) || 'N/A',
+            author: history?.comic?.author || 'N/A',
             cover: history?.comic?.coverImage,
             chapters: history?.comic?.totalChapters,
             views: history?.comic?.views,
@@ -245,7 +321,6 @@ export default function Home() {
 
   const handleScroll = (event) => {
     const offsetY = event.nativeEvent.contentOffset.y;
-    // Show button if scrolled more than ~2500px (approx 20 horizontal items at 125px each)
     if (offsetY > 150) {
       if (!showScrollTop) setShowScrollTop(true);
     } else {
@@ -262,7 +337,7 @@ export default function Home() {
   };
 
   const PopularHeader = () => (
-    <Text style={styles.sectionTitle}>Phổ Biến</Text>
+    <Text style={styles.sectionTitle}>{t('home.popular')}</Text>
   );
 
   const ListHeader = () => (
@@ -287,7 +362,7 @@ export default function Home() {
       <View style={styles.searchBarWrapper}>
         <View style={styles.searchBarFlex}>
           <SearchBar
-            placeholder="Tìm kiếm truyện..."
+            placeholder={t('home.searchPlaceholder')}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -321,7 +396,11 @@ export default function Home() {
           activeOpacity={1}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          <Ionicons name="list" size={20} color={(genrePressed || showGenreModal) ? '#fff' : colors.primary} />
+          <Ionicons
+            name="list"
+            size={20}
+            color={(genrePressed || showGenreModal) ? '#fff' : colors.primary}
+          />
         </TouchableOpacity>
       </View>
 
@@ -365,53 +444,3 @@ export default function Home() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  searchBarWrapper: {
-    backgroundColor: '#ffffff',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingRight: 10,
-    zIndex: 10,
-    gap: 5
-  },
-  searchBarFlex: {
-    flex: 1,
-  },
-  genreBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: colors.secondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.primary,
-    marginBottom: 12,
-    marginTop: 20,
-    paddingHorizontal: 16,
-  },
-  scrollTopBtn: {
-    position: 'absolute',
-    right: 20,
-    bottom: 100,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-});

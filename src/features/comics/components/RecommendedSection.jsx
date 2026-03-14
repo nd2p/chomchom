@@ -1,14 +1,36 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Text, FlatList, StyleSheet } from 'react-native';
-import { colors } from '../../../theme/colors';
+import { useTranslation } from 'react-i18next';
+import { useSettings } from '../../../features/settings/hooks';
 import StoryCard from './StoryCard';
 
+function makeStyles(colors) {
+  return StyleSheet.create({
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.primary,
+      marginBottom: 12,
+      marginTop: 20,
+      paddingHorizontal: 16,
+    },
+    horizontalScroll: {
+      marginBottom: 20,
+      paddingHorizontal: 16,
+    },
+  });
+}
+
 const RecommendedSection = ({ comics, onStoryPress, getComicKey }) => {
+  const { colors } = useSettings();
+  const { t } = useTranslation();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   if (!comics || comics.length === 0) return null;
 
   return (
     <>
-      <Text style={styles.sectionTitle}>Được Đề Xuất</Text>
+      <Text style={styles.sectionTitle}>{t('home.recommended')}</Text>
       <FlatList
         horizontal
         data={comics}
@@ -32,20 +54,5 @@ const RecommendedSection = ({ comics, onStoryPress, getComicKey }) => {
     </>
   );
 };
-
-const styles = StyleSheet.create({
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.primary,
-    marginBottom: 12,
-    marginTop: 20,
-    paddingHorizontal: 16,
-  },
-  horizontalScroll: {
-    marginBottom: 20,
-    paddingHorizontal: 16,
-  },
-});
 
 export default RecommendedSection;

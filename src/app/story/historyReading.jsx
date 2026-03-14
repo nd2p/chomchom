@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
   ActivityIndicator,
@@ -11,15 +11,69 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 
 import { getReadingHistory, removeReadingHistory } from '../../features/bookmarks/api';
 import StoryCard from '../../features/comics/components/StoryCard';
+import { useSettings } from '../../features/settings/hooks';
 
 const { width } = Dimensions.get('window');
 const columnWidth = (width - 32) / 2;
 
+function makeStyles(colors) {
+  return StyleSheet.create({
+    center: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: 100,
+      paddingHorizontal: 20,
+    },
+    row: {
+      justifyContent: 'space-between',
+    },
+    cardWrapper: {
+      position: 'relative',
+      width: columnWidth,
+      marginBottom: 10,
+    },
+    messageText: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginTop: 10,
+    },
+    deleteButton: {
+      position: 'absolute',
+      top: 5,
+      right: 5,
+      backgroundColor: 'rgba(255, 23, 68, 0.9)',
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 20,
+      elevation: 3,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.2,
+      shadowRadius: 1.41,
+    },
+    deleteButtonText: {
+      color: colors.white,
+      fontSize: 10,
+      fontWeight: '700',
+    },
+  });
+}
+
 export default function HistoryReading() {
   const navigation = useNavigation();
+  const { colors } = useSettings();
+  const { t } = useTranslation();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -48,28 +102,32 @@ export default function HistoryReading() {
   };
 
   const handleDelete = (comicId, comicTitle) => {
-    Alert.alert('Xóa lịch sử', `Bạn có muốn xóa "${comicTitle}" khỏi danh sách đã đọc?`, [
-      { text: 'Hủy', style: 'cancel' },
-      {
-        text: 'Xóa',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await removeReadingHistory(comicId);
-            setData((prevData) => prevData.filter((item) => item.comic._id !== comicId));
-          } catch (error) {
-            Alert.alert('Lỗi', 'Không thể xóa lịch sử lúc này.');
-          }
+    Alert.alert(
+      t('history.deleteTitle'),
+      t('history.deleteConfirm', { title: comicTitle }),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('history.deleteButton'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await removeReadingHistory(comicId);
+              setData((prevData) => prevData.filter((item) => item.comic._id !== comicId));
+            } catch (error) {
+              Alert.alert(t('common.error'), t('history.deleteError'));
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#2196F3" />
-        <Text style={{ marginTop: 10 }}>Đang tải lịch sử...</Text>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.messageText, { marginTop: 10 }]}>{t('history.loading')}</Text>
       </View>
     );
   }
@@ -77,7 +135,7 @@ export default function HistoryReading() {
   if (!isLoggedIn) {
     return (
       <View style={styles.center}>
-        <Text style={styles.messageText}>Bạn cần đăng nhập để xem lịch sử đọc.</Text>
+        <Text style={styles.messageText}>{t('history.loginRequired')}</Text>
       </View>
     );
   }
@@ -91,7 +149,7 @@ export default function HistoryReading() {
       columnWrapperStyle={styles.row}
       ListEmptyComponent={
         <View style={styles.center}>
-          <Text style={styles.messageText}>Lịch sử của bạn đang trống.</Text>
+          <Text style={styles.messageText}>{t('history.empty')}</Text>
         </View>
       }
       renderItem={({ item }) => {
@@ -106,8 +164,8 @@ export default function HistoryReading() {
               cover={comic.coverImage || comic.cover}
               chapters={
                 item.chapter?.chapterNumber
-                  ? `Đọc tiếp: C.${item.chapter.chapterNumber}`
-                  : 'Bắt đầu đọc'
+                  ? t('history.readContinue', { chapter: item.chapter.chapterNumber })
+                  : t('history.startReading')
               }
               variant="vertical"
               onPress={() => navigation.navigate('StoryDetail', { id: comic._id })}
@@ -118,7 +176,7 @@ export default function HistoryReading() {
               onPress={() => handleDelete(comic._id, comic.title)}
               activeOpacity={0.8}
             >
-              <Text>Xóa</Text>
+              <Text style={styles.deleteButtonText}>{t('history.deleteButton')}</Text>
             </TouchableOpacity>
           </View>
         );
@@ -126,44 +184,3 @@ export default function HistoryReading() {
     />
   );
 }
-
-const styles = StyleSheet.create({
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 100,
-    paddingHorizontal: 20,
-  },
-  row: {
-    justifyContent: 'space-between',
-  },
-  cardWrapper: {
-    position: 'relative',
-    width: columnWidth,
-    marginBottom: 10,
-  },
-  messageText: {
-    fontSize: 16,
-    color: '#555',
-    textAlign: 'center',
-    marginTop: 10,
-  },
-  deleteButton: {
-    position: 'absolute',
-    top: 5,
-    right: 5,
-    backgroundColor: 'rgba(255, 23, 68, 0.9)',
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 20,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.41,
-  },
-});

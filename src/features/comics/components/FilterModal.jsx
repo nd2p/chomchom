@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,105 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../../theme/colors';
+import { useTranslation } from 'react-i18next';
+import { useSettings } from '../../../features/settings/hooks';
+
+function makeStyles(colors) {
+  return StyleSheet.create({
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.45)',
+      justifyContent: 'flex-end',
+    },
+    modalSheet: {
+      backgroundColor: colors.background,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      paddingTop: 16,
+      maxHeight: '75%',
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+      marginBottom: 16,
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.primary,
+    },
+    filterSection: {
+      paddingHorizontal: 16,
+      marginBottom: 20,
+    },
+    filterSectionTitle: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: colors.text,
+      marginBottom: 12,
+    },
+    optionsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+    },
+    optionChip: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 20,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    optionChipSelected: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    optionText: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      fontWeight: '500',
+    },
+    optionTextSelected: {
+      color: colors.white,
+      fontWeight: '600',
+    },
+    modalFooter: {
+      flexDirection: 'row',
+      paddingHorizontal: 16,
+      paddingTop: 16,
+      paddingBottom: 24,
+      gap: 12,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    footerBtn: {
+      flex: 1,
+      paddingVertical: 14,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    clearBtn: {
+      backgroundColor: colors.card,
+    },
+    confirmBtn: {
+      backgroundColor: colors.primary,
+    },
+    clearBtnText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    confirmBtnText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.white,
+    },
+  });
+}
 
 const FilterModal = ({
   visible,
@@ -24,6 +122,10 @@ const FilterModal = ({
   setSelectedGenres,
   onApply,
 }) => {
+  const { colors } = useSettings();
+  const { t } = useTranslation();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   const handleClear = () => {
     setSelectedStatus('all');
     setSelectedSort('latest');
@@ -37,6 +139,17 @@ const FilterModal = ({
       setSelectedGenres([...selectedGenres, genreId]);
     }
   };
+
+  const statusOptions = [
+    { label: t('filter.statusAll'), value: 'all' },
+    { label: t('filter.statusCompleted'), value: 'completed' },
+    { label: t('filter.statusOngoing'), value: 'ongoing' },
+  ];
+
+  const sortOptions = [
+    { label: t('filter.sortLatest'), value: 'latest' },
+    { label: t('filter.sortViews'), value: 'viewsDesc' },
+  ];
 
   return (
     <Modal
@@ -53,25 +166,20 @@ const FilterModal = ({
         <TouchableOpacity
           style={styles.modalSheet}
           activeOpacity={1}
-          onPress={() => { }}
+          onPress={() => {}}
         >
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Lọc Truyện</Text>
+            <Text style={styles.modalTitle}>{t('filter.title')}</Text>
             <TouchableOpacity onPress={onClose}>
               <Ionicons name="close" size={24} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
-            {/* Status Section */}
             <View style={styles.filterSection}>
-              <Text style={styles.filterSectionTitle}>Trạng thái</Text>
+              <Text style={styles.filterSectionTitle}>{t('filter.status')}</Text>
               <View style={styles.optionsRow}>
-                {[
-                  { label: 'Tất cả', value: 'all' },
-                  { label: 'Hoàn thành', value: 'completed' },
-                  { label: 'Đang ra', value: 'ongoing' },
-                ].map((item) => (
+                {statusOptions.map((item) => (
                   <TouchableOpacity
                     key={item.value}
                     style={[
@@ -93,14 +201,10 @@ const FilterModal = ({
               </View>
             </View>
 
-            {/* Sort Section */}
             <View style={styles.filterSection}>
-              <Text style={styles.filterSectionTitle}>Xếp theo</Text>
+              <Text style={styles.filterSectionTitle}>{t('filter.sort')}</Text>
               <View style={styles.optionsRow}>
-                {[
-                  { label: 'Ngày cập nhật', value: 'latest' },
-                  { label: 'Lượt xem', value: 'viewsDesc' },
-                ].map((item) => (
+                {sortOptions.map((item) => (
                   <TouchableOpacity
                     key={item.value}
                     style={[
@@ -122,9 +226,8 @@ const FilterModal = ({
               </View>
             </View>
 
-            {/* Genre Section */}
             <View style={styles.filterSection}>
-              <Text style={styles.filterSectionTitle}>Thể loại</Text>
+              <Text style={styles.filterSectionTitle}>{t('filter.genre')}</Text>
               {genresLoading ? (
                 <ActivityIndicator color={colors.primary} />
               ) : (
@@ -156,19 +259,18 @@ const FilterModal = ({
             </View>
           </ScrollView>
 
-          {/* Footer */}
           <View style={styles.modalFooter}>
             <TouchableOpacity
               style={[styles.footerBtn, styles.clearBtn]}
               onPress={handleClear}
             >
-              <Text style={styles.clearBtnText}>Xoá</Text>
+              <Text style={styles.clearBtnText}>{t('filter.clear')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.footerBtn, styles.confirmBtn]}
               onPress={onApply}
             >
-              <Text style={styles.confirmBtnText}>Xác nhận</Text>
+              <Text style={styles.confirmBtnText}>{t('filter.apply')}</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -176,100 +278,5 @@ const FilterModal = ({
     </Modal>
   );
 };
-
-const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'flex-end',
-  },
-  modalSheet: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingTop: 16,
-    maxHeight: '75%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  filterSection: {
-    paddingHorizontal: 16,
-    marginBottom: 20,
-  },
-  filterSectionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 12,
-  },
-  optionsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  optionChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#f3f4f6',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  optionChipSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  optionText: {
-    fontSize: 13,
-    color: '#4b5563',
-    fontWeight: '500',
-  },
-  optionTextSelected: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  modalFooter: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 24,
-    gap: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#f3f4f6',
-  },
-  footerBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  clearBtn: {
-    backgroundColor: '#f3f4f6',
-  },
-  confirmBtn: {
-    backgroundColor: colors.primary,
-  },
-  clearBtnText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#4b5563',
-  },
-  confirmBtnText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#fff',
-  },
-});
 
 export default FilterModal;

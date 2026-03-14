@@ -1,14 +1,43 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Text, FlatList, StyleSheet } from 'react-native';
-import { colors } from '../../../theme/colors';
+import { useTranslation } from 'react-i18next';
+import { useSettings } from '../../../features/settings/hooks';
 import StoryCard from './StoryCard';
 
+function makeStyles(colors) {
+  return StyleSheet.create({
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.primary,
+      marginBottom: 12,
+      marginTop: 20,
+      paddingHorizontal: 16,
+    },
+    horizontalScroll: {
+      marginBottom: 20,
+      paddingHorizontal: 16,
+    },
+    emptyMessage: {
+      textAlign: 'center',
+      color: colors.textSecondary,
+      fontSize: 14,
+      paddingVertical: 24,
+      paddingHorizontal: 16,
+    },
+  });
+}
+
 const RecentlyReadSection = ({ comics, isAuthenticated, onStoryPress, getComicKey }) => {
+  const { colors } = useSettings();
+  const { t } = useTranslation();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   return (
     <>
-      <Text style={styles.sectionTitle}>Đọc Gần Đây</Text>
+      <Text style={styles.sectionTitle}>{t('home.recentlyRead')}</Text>
       {!isAuthenticated ? (
-        <Text style={styles.emptyMessage}>Hãy đăng nhập để xem tính năng này</Text>
+        <Text style={styles.emptyMessage}>{t('home.loginRequired')}</Text>
       ) : comics && comics.length > 0 ? (
         <FlatList
           horizontal
@@ -31,32 +60,10 @@ const RecentlyReadSection = ({ comics, isAuthenticated, onStoryPress, getComicKe
           nestedScrollEnabled={true}
         />
       ) : (
-        <Text style={styles.emptyMessage}>Chưa có lịch sử đọc</Text>
+        <Text style={styles.emptyMessage}>{t('home.noHistory')}</Text>
       )}
     </>
   );
 };
-
-const styles = StyleSheet.create({
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.primary,
-    marginBottom: 12,
-    marginTop: 20,
-    paddingHorizontal: 16,
-  },
-  horizontalScroll: {
-    marginBottom: 20,
-    paddingHorizontal: 16,
-  },
-  emptyMessage: {
-    textAlign: 'center',
-    color: colors.textSecondary,
-    fontSize: 14,
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-  },
-});
 
 export default RecentlyReadSection;

@@ -1,8 +1,49 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../../theme/colors';
+import { useTranslation } from 'react-i18next';
+import { useSettings } from '../../../features/settings/hooks';
 import StoryCard from './StoryCard';
+
+function makeStyles(colors) {
+  return StyleSheet.create({
+    scrollContent: {
+      paddingBottom: 80,
+    },
+    listContent: {
+      backgroundColor: colors.card,
+      borderRadius: 8,
+      marginHorizontal: 16,
+    },
+    filteredHeader: {
+      paddingHorizontal: 16,
+      paddingTop: 20,
+      paddingBottom: 10,
+    },
+    filteredTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.primary,
+      lineHeight: 24,
+      marginBottom: 8,
+    },
+    clearFilterBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    clearFilterText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.primary,
+    },
+    loaderFooter: {
+      paddingVertical: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+  });
+}
 
 const MainComicList = ({
   comics,
@@ -17,6 +58,10 @@ const MainComicList = ({
   onScroll,
   flatListRef,
 }) => {
+  const { colors } = useSettings();
+  const { t } = useTranslation();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   return (
     <FlatList
       ref={flatListRef}
@@ -43,7 +88,7 @@ const MainComicList = ({
             <Text style={styles.filteredTitle}>{filterTitle}</Text>
             <TouchableOpacity onPress={onClearFilters} style={styles.clearFilterBtn}>
               <Ionicons name="arrow-back" size={16} color={colors.primary} />
-              <Text style={styles.clearFilterText}>Quay lại</Text>
+              <Text style={styles.clearFilterText}>{t('home.goBack')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -65,43 +110,5 @@ const MainComicList = ({
     />
   );
 };
-
-const styles = StyleSheet.create({
-  scrollContent: {
-    paddingBottom: 80,
-  },
-  listContent: {
-    backgroundColor: '#ffffff',
-    borderRadius: 8,
-    marginHorizontal: 16,
-  },
-  filteredHeader: {
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    paddingBottom: 10,
-  },
-  filteredTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.primary,
-    lineHeight: 24,
-    marginBottom: 8,
-  },
-  clearFilterBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  clearFilterText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.primary,
-  },
-  loaderFooter: {
-    paddingVertical: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
 
 export default MainComicList;

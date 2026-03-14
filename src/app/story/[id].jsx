@@ -16,7 +16,11 @@ import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/nativ
 import { colors } from '../../theme/colors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { likeComic } from '../../features/bookmarks/api';
-import { getComicDetails, getComicReviews, createReview } from '../../services/api/comics';
+import {
+  getComicDetails,
+  getComicReviews,
+  createReview,
+} from '../../services/api/comics';
 
 const { width } = Dimensions.get('window');
 
@@ -348,10 +352,6 @@ export default function StoryDetail() {
           <View style={styles.tabContent}>
             {/* Chapters List */}
             <View style={styles.chaptersSection}>
-              <View style={styles.chaptersHeader}>
-                <Text style={styles.sectionTitle}>Danh sách chương</Text>
-              </View>
-
               {/* Action Buttons */}
               <View style={styles.actionSection}>
                 <TouchableOpacity
@@ -377,24 +377,6 @@ export default function StoryDetail() {
                     {isLiked ? 'Đang theo dõi' : '+ Theo dõi'}
                   </Text>
                 </TouchableOpacity>
-              </View>
-
-              {/* Description */}
-              <View style={styles.descriptionSection}>
-                <Text style={styles.sectionTitle}>Nội dung</Text>
-                <Text
-                  style={styles.description}
-                  numberOfLines={showFullDescription ? undefined : 3}
-                >
-                  {comic?.description}
-                </Text>
-                {comic?.description && comic.description.length > 100 && (
-                  <TouchableOpacity onPress={() => setShowFullDescription(!showFullDescription)}>
-                    <Text style={styles.readMore}>
-                      {showFullDescription ? 'Thu gọn' : 'Xem thêm'}
-                    </Text>
-                  </TouchableOpacity>
-                )}
               </View>
 
               {/* Chapters List */}
@@ -941,7 +923,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   chaptersSection: {
-    paddingHorizontal: 16,
     marginTop: 16,
   },
   chaptersHeader: {
