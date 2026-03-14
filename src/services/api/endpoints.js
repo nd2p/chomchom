@@ -5,4 +5,5 @@ export const endpoints = {
     login: '/api/auth/login',
   },
   readingHistory: '/api/reading-history',
+  genres: '/api/genres',
 };
