@@ -6,12 +6,14 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
-  FlatList,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import { getComicDetails } from '../../features/comics/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { likeComic } from '../../features/bookmarks/api';
 
 const { width } = Dimensions.get('window');
 
@@ -19,11 +21,13 @@ export default function StoryDetail() {
   const navigation = useNavigation();
   const route = useRoute();
   const comicId = route.params?.id;
-
+  const [lastChapterId, setLastChapterId] = useState(null);
   const [comic, setComic] = useState(null);
   const [chapters, setChapters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showFullDescription, setShowFullDescription] = useState(false);
+  const lastChapter = chapters.find((chap) => chap._id === lastChapterId);
+  const [isLiked, setIsLiked] = useState(false);
 
   useEffect(() => {
     const fetchComicDetails = async () => {
@@ -48,8 +52,47 @@ export default function StoryDetail() {
     navigation.goBack();
   };
 
-  const handleBookmark = () => {
-    console.log('Bookmark pressed');
+  useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        const data = await AsyncStorage.getItem(`history_${comicId}`);
+
+        if (data) {
+          const history = JSON.parse(data);
+          setLastChapterId(history.chapterId);
+        }
+      } catch (error) {
+        console.log('Load history error:', error);
+      }
+    };
+
+    if (comicId) {
+      loadHistory();
+    }
+  }, [comicId]);
+
+  const handleStartReading = async () => {
+    try {
+      const data = await AsyncStorage.getItem(`history_${comicId}`);
+
+      if (data) {
+        const history = JSON.parse(data);
+
+        navigation.navigate('ChapterDetail', {
+          chapterId: history.chapterId,
+          comicId,
+        });
+      } else {
+        if (chapters.length === 0) return;
+
+        navigation.navigate('ChapterDetail', {
+          chapterId: chapters[0]._id,
+          comicId,
+        });
+      }
+    } catch (error) {
+      console.log('Read history error:', error);
+    }
   };
 
   const handleChapterPress = (chapterId) => {
@@ -60,8 +103,25 @@ export default function StoryDetail() {
   };
 
   const handleReadNow = () => {
-    if (chapters.length > 0) {
-      handleChapterPress(chapters[0]._id);
+    handleStartReading();
+  };
+
+  const handleToggleFollow = async () => {
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+
+      if (!token) {
+        Alert.alert('Yêu cầu đăng nhập', 'Bạn cần đăng nhập để theo dõi truyện này!');
+        return;
+      }
+
+      setIsLiked(!isLiked);
+
+      await likeComic(comicId);
+    } catch (error) {
+      console.log('Toggle follow error:', error);
+      setIsLiked(isLiked);
+      Alert.alert('Lỗi', 'Không thể thay đổi trạng thái theo dõi lúc này.');
     }
   };
 
@@ -105,9 +165,6 @@ export default function StoryDetail() {
         <Text style={styles.headerTitle} numberOfLines={1}>
           {comic?.title || 'Chi tiết truyện'}
         </Text>
-        <TouchableOpacity style={styles.headerButton} onPress={handleBookmark}>
-          <Text style={styles.bookmarkIcon}>♡</Text>
-        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} bounces={false}>
@@ -177,10 +234,18 @@ export default function StoryDetail() {
         <View style={styles.actionSection}>
           <TouchableOpacity style={styles.readButton} onPress={handleReadNow} activeOpacity={0.8}>
             <Text style={styles.readButtonIcon}>▶</Text>
-            <Text style={styles.readButtonText}>Đọc ngay</Text>
+            <Text style={styles.readButtonText}>
+              {lastChapter ? `Chap: ${lastChapter.chapterNumber}` : 'Đọc ngay'}
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.followButton} activeOpacity={0.8}>
-            <Text style={styles.followButtonText}>+ Theo dõi</Text>
+          <TouchableOpacity
+            style={[styles.followButton, isLiked && styles.followedButton]}
+            onPress={handleToggleFollow}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.followButtonText, isLiked && styles.followedText]}>
+              {isLiked ? 'Đang theo dõi' : '+ Theo dõi'}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -268,7 +333,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.text,
-    textAlign: 'center',
+    textAlign: 'start',
     paddingHorizontal: 8,
   },
   bookmarkIcon: {

@@ -15,6 +15,8 @@ import {
 } from 'react-native';
 import { getChaptersByComic, getChapterById } from '../../../features/chapters/api';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { updateReadingHistory } from '../../../features/bookmarks/api';
 
 const { width } = Dimensions.get('window');
 const ITEM_HEIGHT = 64;
@@ -33,6 +35,7 @@ export default function ChapterDetail() {
   const navigation = useNavigation();
   const route = useRoute();
   const chapterId = route.params?.chapterId;
+  const comicId = route.params?.comicId;
 
   const [chapter, setChapter] = useState(null);
   const [chapters, setChapters] = useState([]);
@@ -61,6 +64,12 @@ export default function ChapterDetail() {
     loadChapter();
   }, [chapterId]);
 
+  useEffect(() => {
+    if (chapter && comicId && chapterId) {
+      saveReading();
+    }
+  }, [chapter, comicId, chapterId]);
+
   const loadChapter = async () => {
     try {
       setLoading(true);
@@ -74,6 +83,30 @@ export default function ChapterDetail() {
       console.log('Load chapter error:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const saveReading = async () => {
+    try {
+      const key = `history_${comicId}`;
+      const existing = await AsyncStorage.getItem(key);
+
+      if (existing) {
+        const parsed = JSON.parse(existing);
+        if (parsed.chapterId === chapterId) return;
+      }
+
+      await AsyncStorage.setItem(key, JSON.stringify({ chapterId }));
+
+      const token = await AsyncStorage.getItem('userToken');
+
+      if (token) {
+        await updateReadingHistory(comicId, chapterId);
+      } else {
+        console.log('User chưa đăng nhập, đã lưu lịch sử đọc offline thành công!');
+      }
+    } catch (error) {
+      console.log('Save history error:', error);
     }
   };
 
@@ -108,13 +141,14 @@ export default function ChapterDetail() {
   // NAVIGATION
   const goPrev = () => {
     const index = chapters.findIndex((c) => c._id === chapter._id);
-    if (index > 0) navigation.replace('ChapterDetail', { chapterId: chapters[index - 1]._id });
+    if (index > 0)
+      navigation.replace('ChapterDetail', { chapterId: chapters[index - 1]._id, comicId: comicId });
   };
 
   const goNext = () => {
     const index = chapters.findIndex((c) => c._id === chapter._id);
     if (index < chapters.length - 1)
-      navigation.replace('ChapterDetail', { chapterId: chapters[index + 1]._id });
+      navigation.replace('ChapterDetail', { chapterId: chapters[index + 1]._id, comicId: comicId });
   };
 
   // RENDER PAGE
@@ -259,6 +293,7 @@ export default function ChapterDetail() {
                         if (!isActive)
                           navigation.replace('ChapterDetail', {
                             chapterId: item._id,
+                            comicId: comicId,
                           });
                       }}
                     >
