@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
+import { Ionicons } from '@expo/vector-icons';
 
 import { getReadingHistory, removeReadingHistory } from '../../features/bookmarks/api';
 import StoryCard from '../../features/comics/components/StoryCard';
@@ -18,7 +19,9 @@ import { useSettings } from '../../features/settings/hooks';
 import { useAuth } from '../../features/auth/hooks';
 
 const { width } = Dimensions.get('window');
-const columnWidth = (width - 32) / 2;
+const horizontalPadding = 20;
+const columnGap = 10;
+const columnWidth = (width - horizontalPadding * 2 - columnGap) / 2;
 
 function makeStyles(colors) {
   return StyleSheet.create({
@@ -31,6 +34,7 @@ function makeStyles(colors) {
     },
     row: {
       justifyContent: 'space-between',
+      paddingHorizontal: horizontalPadding,
     },
     cardWrapper: {
       position: 'relative',
@@ -45,20 +49,18 @@ function makeStyles(colors) {
     },
     deleteButton: {
       position: 'absolute',
-      top: 0,
-      right: 0,
+      top: 6,
+      right: 6,
       backgroundColor: 'rgba(255, 23, 68, 0.95)',
-      width: 26,
-      height: 26,
-      borderRadius: 13,
+      width: 28,
+      height: 28,
+      borderRadius: 14,
       justifyContent: 'center',
       alignItems: 'center',
       zIndex: 50,
     },
-    deleteButtonText: {
+    deleteIcon: {
       color: colors.white,
-      fontSize: 10,
-      fontWeight: '700',
     },
   });
 }
@@ -140,7 +142,7 @@ export default function HistoryReading() {
       data={data}
       numColumns={2}
       keyExtractor={(item) => item._id}
-      contentContainerStyle={{ padding: 10 }}
+      contentContainerStyle={{ paddingVertical: 10 }}
       columnWrapperStyle={styles.row}
       initialNumToRender={6}
       maxToRenderPerBatch={6}
@@ -161,6 +163,8 @@ export default function HistoryReading() {
               title={comic.title}
               author={comic.author}
               cover={comic.coverImage || comic.cover}
+              containerStyle={{ width: '100%' }}
+              imageStyle={{ width: '100%' }}
               chapters={
                 item?.chapter?.chapterNumber
                   ? t('history.readContinue', {
@@ -168,7 +172,7 @@ export default function HistoryReading() {
                     })
                   : t('history.startReading')
               }
-              variant='vertical'
+              variant="vertical"
               onPress={() => navigation.navigate('StoryDetail', { id: comic._id })}
             />
 
@@ -177,7 +181,7 @@ export default function HistoryReading() {
               onPress={() => handleDelete(comic._id, comic.title)}
               activeOpacity={0.8}
             >
-              <Text style={styles.deleteButtonText}>{t('history.deleteButton')}</Text>
+              <Ionicons name="trash-outline" size={14} style={styles.deleteIcon} />
             </TouchableOpacity>
           </View>
         );

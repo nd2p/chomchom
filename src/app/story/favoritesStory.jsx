@@ -9,7 +9,9 @@ import { useSettings } from '../../features/settings/hooks';
 import { useAuth } from '../../features/auth/hooks';
 
 const { width } = Dimensions.get('window');
-const columnWidth = (width - 32) / 2;
+const horizontalPadding = 20;
+const columnGap = 10;
+const columnWidth = (width - horizontalPadding * 2 - columnGap) / 2;
 
 function makeStyles(colors) {
   return StyleSheet.create({
@@ -22,6 +24,7 @@ function makeStyles(colors) {
     },
     row: {
       justifyContent: 'space-between',
+      paddingHorizontal: horizontalPadding,
     },
     cardWrapper: {
       position: 'relative',
@@ -95,7 +98,7 @@ export default function FavoriteReading() {
       data={data}
       numColumns={2}
       keyExtractor={(item) => item._id}
-      contentContainerStyle={{ padding: 10 }}
+      contentContainerStyle={{ paddingVertical: 10 }}
       columnWrapperStyle={styles.row}
       initialNumToRender={6}
       maxToRenderPerBatch={6}

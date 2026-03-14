@@ -28,13 +28,27 @@ export function formatViews(views) {
   return format(views / 1_000_000_000, 'B');
 }
 
-const StoryCard = ({ title, author, cover, views, chapters, onPress, variant = 'vertical' }) => {
+const StoryCard = ({
+  title,
+  author,
+  cover,
+  views,
+  chapters,
+  onPress,
+  variant = 'vertical',
+  containerStyle,
+  imageStyle,
+}) => {
   const { colors } = useSettings();
   const styles = variant === 'vertical' ? makeVerticalStyles(colors) : makeHorizontalStyles(colors);
 
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
-      <Image source={{ uri: cover }} style={styles.image} resizeMode="stretch" />
+    <TouchableOpacity
+      style={[styles.container, containerStyle]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <Image source={{ uri: cover }} style={[styles.image, imageStyle]} resizeMode="stretch" />
       <View style={styles.content}>
         <Text style={styles.title} numberOfLines={2}>
           {title}

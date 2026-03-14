@@ -15,7 +15,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import { useAuth } from '../../features/auth/hooks';
-import { getReadingHistory, likeComic } from '../../features/bookmarks/api';
+import { getReadingHistory, likeComic, getLikedComics } from '../../features/bookmarks/api';
 import { getComicDetails, getComicReviews, createReview } from '../../services/api/comics';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -584,7 +584,9 @@ export default function StoryDetail() {
         setComic(comicData);
         setChapters(comicData?.chapters || []);
         setReviews(reviewsRes?.comments || []);
-        setIsLiked(comicRes?.isLiked || false);
+        setIsLiked((prev) =>
+          typeof comicRes?.isLiked === 'boolean' ? comicRes.isLiked : prev
+        );
       } catch (error) {
         console.log('Failed to fetch comic details', error);
       } finally {
@@ -594,9 +596,38 @@ export default function StoryDetail() {
     fetchComicDetails();
   }, [comicId]);
 
-  const handleBack = () => {
-    navigation.goBack();
-  };
+  useEffect(() => {
+    if (!isAuthenticated || !comicId) return;
+    let cancelled = false;
+
+    const syncLikedState = async () => {
+      try {
+        const res = await getLikedComics();
+        const list = Array.isArray(res)
+          ? res
+          : Array.isArray(res?.comics)
+            ? res.comics
+            : Array.isArray(res?.data)
+              ? res.data
+              : Array.isArray(res?.data?.comics)
+                ? res.data.comics
+                : [];
+        const liked = list.some((item) => {
+          const id = item?.comic?._id ?? item?._id ?? item?.id;
+          return String(id) === String(comicId);
+        });
+        if (!cancelled) setIsLiked(liked);
+      } catch (error) {
+        console.log('Failed to sync liked state', error);
+      }
+    };
+
+    syncLikedState();
+    return () => {
+      cancelled = true;
+    };
+  }, [comicId, isAuthenticated]);
+
 
   useEffect(() => {
     const loadHistory = async () => {

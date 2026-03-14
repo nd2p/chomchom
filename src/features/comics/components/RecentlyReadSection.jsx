@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
-import { Text, FlatList, StyleSheet } from 'react-native';
+import { Text, FlatList, StyleSheet, View, Pressable } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useSettings } from '../../../features/settings/hooks';
+import { useTabNavigation } from '../../../navigation/tabContext';
 import StoryCard from './StoryCard';
 
 function makeStyles(colors) {
@@ -25,6 +26,23 @@ function makeStyles(colors) {
       paddingVertical: 24,
       paddingHorizontal: 16,
     },
+    emptyMessageRow: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      flexWrap: 'wrap',
+      paddingVertical: 24,
+      paddingHorizontal: 16,
+    },
+    emptyMessageText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      textAlign: 'center',
+    },
+    loginLink: {
+      color: colors.primary,
+      fontWeight: '700',
+      textDecorationLine: 'underline',
+    },
   });
 }
 
@@ -32,12 +50,23 @@ const RecentlyReadSection = ({ comics, isAuthenticated, onStoryPress, getComicKe
   const { colors } = useSettings();
   const { t } = useTranslation();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const tabNavigation = useTabNavigation();
+
+  const handleLoginPress = () => {
+    tabNavigation?.navigateTab?.('Profile');
+  };
 
   return (
     <>
       <Text style={styles.sectionTitle}>{t('home.recentlyRead')}</Text>
       {!isAuthenticated ? (
-        <Text style={styles.emptyMessage}>{t('home.loginRequired')}</Text>
+        <View style={styles.emptyMessageRow}>
+          <Text style={styles.emptyMessageText}>{t('home.loginRequiredPrefix')}</Text>
+          <Pressable onPress={handleLoginPress} hitSlop={8}>
+            <Text style={styles.loginLink}>{t('home.loginRequiredLink')}</Text>
+          </Pressable>
+          <Text style={styles.emptyMessageText}>{t('home.loginRequiredSuffix')}</Text>
+        </View>
       ) : comics && comics.length > 0 ? (
         <FlatList
           horizontal
