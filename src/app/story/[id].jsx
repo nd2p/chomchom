@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -9,11 +9,14 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Dimensions,
+  Alert,
   ActivityIndicator,
   StatusBar
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { likeComic } from '../../features/bookmarks/api';
 import { getComicDetails, getComicReviews, createReview } from '../../services/api/comics';
 
 const { width } = Dimensions.get('window');
@@ -22,15 +25,38 @@ export default function StoryDetail() {
   const navigation = useNavigation();
   const route = useRoute();
   const comicId = route.params?.id;
-
+  const [lastChapterId, setLastChapterId] = useState(null);
   const [comic, setComic] = useState(null);
   const [chapters, setChapters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showFullDescription, setShowFullDescription] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
   const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'chapter', or 'review'
   const [reviews, setReviews] = useState([]);
   const [reviewText, setReviewText] = useState('');
   const [reviewRating, setReviewRating] = useState(0);
+  // useMemo ghi nhớ kết quả của lastChapter. Chạy lại khi chapters & lastChapterId change
+  const lastChapter = useMemo(() => {
+    if (!lastChapterId || chapters.length === 0) return null;
+    return chapters.find((chap) => chap._id === lastChapterId);
+  }, [lastChapterId, chapters]);
+
+  // Chạy mỗi khi màn hình đó hiển thị trước mắt người dùng.
+  useFocusEffect(
+    React.useCallback(() => {
+      const updateUI = async () => {
+        const key = `history_${comicId}`;
+        const saved = await AsyncStorage.getItem(key);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setLastChapterId(parsed.chapterId);
+        }
+      };
+
+      if (comicId) updateUI();
+    }, [comicId])
+  );
+
 
   // Helper to normalize status from API
   const getStatusText = (status) => {
@@ -79,6 +105,25 @@ export default function StoryDetail() {
     navigation.goBack();
   };
 
+  useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        const data = await AsyncStorage.getItem(`history_${comicId}`);
+
+        if (data) {
+          const history = JSON.parse(data);
+          setLastChapterId(history.chapterId);
+        }
+      } catch (error) {
+        console.log('Load history error:', error);
+      }
+    };
+
+    if (comicId) {
+      loadHistory();
+    }
+  }, [comicId]);
+
   const handleBookmark = () => {
     // Handle bookmark
   };
@@ -91,8 +136,32 @@ export default function StoryDetail() {
   };
 
   const handleReadNow = () => {
-    if (chapters.length > 0) {
-      handleChapterPress(chapters[0]._id);
+    const targetId = lastChapterId || chapters[0]?._id;
+
+    if (targetId) {
+      navigation.navigate('ChapterDetail', {
+        chapterId: targetId,
+        comicId: comicId,
+      });
+    }
+  };
+
+  const handleToggleFollow = async () => {
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+
+      if (!token) {
+        Alert.alert('Yêu cầu đăng nhập', 'Bạn cần đăng nhập để theo dõi truyện này!');
+        return;
+      }
+
+      setIsLiked(!isLiked);
+
+      await likeComic(comicId);
+    } catch (error) {
+      console.log('Toggle follow error:', error);
+      setIsLiked(isLiked);
+      Alert.alert('Lỗi', 'Không thể thay đổi trạng thái theo dõi lúc này.');
     }
   };
 
@@ -155,9 +224,6 @@ export default function StoryDetail() {
         <Text style={styles.headerTitle} numberOfLines={1}>
           {comic?.title || 'Chi tiết truyện'}
         </Text>
-        <TouchableOpacity style={styles.headerButton} onPress={handleBookmark}>
-          <Text style={styles.bookmarkIcon}>♡</Text>
-        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} bounces={false}>
@@ -299,10 +365,22 @@ export default function StoryDetail() {
         <View style={styles.actionSection}>
           <TouchableOpacity style={styles.readButton} onPress={handleReadNow} activeOpacity={0.8}>
             <Text style={styles.readButtonIcon}>▶</Text>
-            <Text style={styles.readButtonText}>Đọc ngay</Text>
+            <Text style={styles.readButtonText}>
+              {lastChapter
+                ? `Tiếp tục: C.${lastChapter.chapterNumber}`
+                : lastChapterId
+                  ? 'Đang tải...'
+                  : 'Đọc ngay'}
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.followButton} activeOpacity={0.8}>
-            <Text style={styles.followButtonText}>+ Theo dõi</Text>
+          <TouchableOpacity
+            style={[styles.followButton, isLiked && styles.followedButton]}
+            onPress={handleToggleFollow}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.followButtonText, isLiked && styles.followedText]}>
+              {isLiked ? 'Đang theo dõi' : '+ Theo dõi'}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -473,7 +551,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.text,
-    textAlign: 'center',
+    textAlign: 'start',
     paddingHorizontal: 8,
   },
   bookmarkIcon: {

@@ -18,6 +18,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { getChaptersByComic, getChapterById } from '../../../features/chapters/api';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { updateReadingHistory } from '../../../features/bookmarks/api';
 
 const { width } = Dimensions.get('window');
 const ITEM_HEIGHT = 64;
@@ -36,6 +38,7 @@ export default function ChapterDetail() {
   const navigation = useNavigation();
   const route = useRoute();
   const chapterId = route.params?.chapterId;
+  const comicId = route.params?.comicId;
 
   const [chapter, setChapter] = useState(null);
   const [chapters, setChapters] = useState([]);
@@ -86,6 +89,34 @@ export default function ChapterDetail() {
   }, [chapterId]);
 
   useEffect(() => {
+    if (chapter && comicId && chapterId) {
+      saveReading();
+    }
+  }, [chapter, comicId, chapterId]);
+
+  const saveReading = async () => {
+    try {
+      const key = `history_${comicId}`;
+
+      const historyData = {
+        chapterId,
+        updatedAt: new Date().getTime(),
+      };
+
+      await AsyncStorage.setItem(key, JSON.stringify(historyData));
+
+      const token = await AsyncStorage.getItem('userToken');
+      if (token) {
+        await updateReadingHistory(comicId, chapterId);
+      } else {
+        console.log('Đã cập nhật lịch sử đọc offline!');
+      }
+    } catch (error) {
+      console.log('Save history error:', error);
+    }
+  };
+
+  useEffect(() => {
     if (!chapterModal || !chapterListRef.current) return;
     const idx = sortedChapters.findIndex((c) => c._id === chapter?._id);
     if (idx < 0) return;
@@ -132,15 +163,20 @@ export default function ChapterDetail() {
     animateUI(!uiVisibleRef.current);
   };
 
+  const handleBack = async () => {
+    await saveReading();
+    navigation.goBack();
+  };
+
   const goPrev = () => {
     if (currentIndex > 0) {
-      navigation.replace('ChapterDetail', { chapterId: chapters[currentIndex - 1]._id });
+      navigation.replace('ChapterDetail', { chapterId: chapters[currentIndex - 1]._id, comicId: comicId });
     }
   };
 
   const goNext = () => {
     if (currentIndex < chapters.length - 1) {
-      navigation.replace('ChapterDetail', { chapterId: chapters[currentIndex + 1]._id });
+      navigation.replace('ChapterDetail', { chapterId: chapters[currentIndex + 1]._id, comicId: comicId });
     }
   };
 
@@ -193,7 +229,7 @@ export default function ChapterDetail() {
         ]}
       >
         <View style={styles.headerContent}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
+          <TouchableOpacity onPress={handleBack}>
             <Text style={styles.iconText}>❮</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Chương {chapter.chapterNumber}</Text>
