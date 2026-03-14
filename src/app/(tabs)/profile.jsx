@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,14 +7,15 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
-  TextInput,
   Image,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../features/auth/hooks';
 import { authApi } from '../../features/auth/api';
-import { colors } from '../../theme/colors';
+import { useSettings } from '../../features/settings/hooks';
 import RegisterScreen from '../(auth)/register';
 import LoginScreen from '../(auth)/login';
 
@@ -30,25 +31,38 @@ function GuestView() {
     );
   }
 
-  // Fallback to login form if not in register mode
   return (
     <View style={{ flex: 1, marginTop: -40 }}>
       <LoginScreen onSwitchMode={setMode} />
     </View>
   );
 }
-// ---------- Authenticated view ----------
 
+// ---------- Authenticated view ----------
 function UserProfile() {
   const { user, logout } = useAuth();
+  const { colors } = useSettings();
+  const { t } = useTranslation();
   const { top: topInset } = useSafeAreaInsets();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const router = useRouter();
+  const prof = useMemo(() => makeStyles(colors), [colors]);
+
+  const menuItems = [
+    { icon: 'person-outline', label: t('profile.menu.editProfile') },
+    { icon: 'bookmark-outline', label: t('profile.menu.myBookmarks') },
+    { icon: 'time-outline', label: t('profile.menu.readingHistory') },
+    { icon: 'download-outline', label: t('profile.menu.downloads') },
+    { icon: 'notifications-outline', label: t('profile.menu.notifications') },
+    { icon: 'settings-outline', label: t('profile.menu.settings'), route: '/settings' },
+    { icon: 'help-circle-outline', label: t('profile.menu.helpFeedback') },
+  ];
 
   async function handleLogout() {
-    Alert.alert('Đăng xuất', 'Bạn có chắc muốn đăng xuất không?', [
-      { text: 'Huỷ', style: 'cancel' },
+    Alert.alert(t('auth.logout.title'), t('auth.logout.confirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Đăng xuất',
+        text: t('auth.logout.button'),
         style: 'destructive',
         onPress: async () => {
           setIsLoggingOut(true);
@@ -100,9 +114,9 @@ function UserProfile() {
       {/* Stats */}
       <View style={prof.statsRow}>
         {[
-          { label: 'Đang đọc', value: '0' },
-          { label: 'Bookmark', value: '0' },
-          { label: 'Hoàn thành', value: '0' },
+          { label: t('profile.stats.reading'), value: '0' },
+          { label: t('profile.stats.bookmarks'), value: '0' },
+          { label: t('profile.stats.completed'), value: '0' },
         ].map((s, i, arr) => (
           <React.Fragment key={s.label}>
             <View style={prof.statItem}>
@@ -116,19 +130,12 @@ function UserProfile() {
 
       {/* Menu */}
       <View style={prof.menuSection}>
-        {[
-          { icon: 'person-outline', label: 'Chỉnh sửa hồ sơ' },
-          { icon: 'bookmark-outline', label: 'Bookmark của tôi' },
-          { icon: 'time-outline', label: 'Lịch sử đọc' },
-          { icon: 'download-outline', label: 'Truyện đã tải' },
-          { icon: 'notifications-outline', label: 'Thông báo' },
-          { icon: 'settings-outline', label: 'Cài đặt' },
-          { icon: 'help-circle-outline', label: 'Trợ giúp & Phản hồi' },
-        ].map((item, idx, arr) => (
+        {menuItems.map((item, idx, arr) => (
           <TouchableOpacity
             key={item.label}
             style={[prof.menuItem, idx === arr.length - 1 && { borderBottomWidth: 0 }]}
             activeOpacity={0.7}
+            onPress={item.route ? () => router.push(item.route) : undefined}
           >
             <View style={prof.menuIconWrap}>
               <Ionicons name={item.icon} size={20} color={colors.primary} />
@@ -151,7 +158,7 @@ function UserProfile() {
         ) : (
           <>
             <Ionicons name="log-out-outline" size={20} color={colors.error} />
-            <Text style={prof.logoutText}>Đăng xuất</Text>
+            <Text style={prof.logoutText}>{t('auth.logout.button')}</Text>
           </>
         )}
       </TouchableOpacity>
@@ -159,163 +166,158 @@ function UserProfile() {
   );
 }
 
-const prof = StyleSheet.create({
-  scroll: {
-    flexGrow: 1,
-    paddingBottom: 100,
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  avatarWrap: {
-    position: 'relative',
-    marginBottom: 12,
-  },
-  avatarImg: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 3,
-    borderColor: colors.border,
-  },
-  avatarFallback: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: colors.secondary,
-    borderWidth: 3,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarInitials: {
-    fontSize: 44,
-    fontWeight: '800',
-    color: colors.primary,
-  },
-  providerBadge: {
-    position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: colors.google,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: colors.white,
-  },
-  providerLetter: {
-    color: colors.white,
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  name: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 4,
-  },
-  email: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginBottom: 20,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    width: '100%',
-    marginBottom: 24,
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: 16,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: colors.border,
-    marginVertical: 4,
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: colors.primary,
-    marginBottom: 2,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-  menuSection: {
-    width: '100%',
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: 'hidden',
-    marginBottom: 20,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    gap: 12,
-  },
-  menuIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: colors.secondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  menuLabel: {
-    flex: 1,
-    fontSize: 15,
-    color: colors.text,
-    fontWeight: '500',
-  },
-  logoutBtn: {
-    width: '100%',
-    height: 52,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: colors.error,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    backgroundColor: colors.errorLight,
-  },
-  logoutText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.error,
-  },
-});
+function makeStyles(colors) {
+  return StyleSheet.create({
+    scroll: {
+      flexGrow: 1,
+      paddingBottom: 100,
+      alignItems: 'center',
+      paddingHorizontal: 20,
+    },
+    avatarWrap: {
+      position: 'relative',
+      marginBottom: 12,
+    },
+    avatarImg: {
+      width: 120,
+      height: 120,
+      borderRadius: 60,
+      borderWidth: 3,
+      borderColor: colors.border,
+    },
+    avatarFallback: {
+      width: 120,
+      height: 120,
+      borderRadius: 60,
+      backgroundColor: colors.secondary,
+      borderWidth: 3,
+      borderColor: colors.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarInitials: {
+      fontSize: 44,
+      fontWeight: '800',
+      color: colors.primary,
+    },
+    providerBadge: {
+      position: 'absolute',
+      bottom: 2,
+      right: 2,
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      backgroundColor: colors.google,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 2,
+      borderColor: colors.white,
+    },
+    providerLetter: {
+      color: colors.white,
+      fontSize: 12,
+      fontWeight: '900',
+    },
+    name: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: colors.text,
+      marginBottom: 4,
+    },
+    email: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      marginBottom: 20,
+    },
+    statsRow: {
+      flexDirection: 'row',
+      width: '100%',
+      marginBottom: 24,
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingVertical: 16,
+    },
+    statItem: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    statDivider: {
+      width: 1,
+      backgroundColor: colors.border,
+      marginVertical: 4,
+    },
+    statValue: {
+      fontSize: 20,
+      fontWeight: '800',
+      color: colors.primary,
+      marginBottom: 2,
+    },
+    statLabel: {
+      fontSize: 12,
+      color: colors.textSecondary,
+    },
+    menuSection: {
+      width: '100%',
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: 'hidden',
+      marginBottom: 20,
+    },
+    menuItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      gap: 12,
+    },
+    menuIconWrap: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      backgroundColor: colors.secondary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    menuLabel: {
+      flex: 1,
+      fontSize: 15,
+      color: colors.text,
+      fontWeight: '500',
+    },
+    logoutBtn: {
+      width: '100%',
+      height: 52,
+      borderRadius: 14,
+      borderWidth: 1.5,
+      borderColor: colors.error,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 10,
+      backgroundColor: colors.errorLight,
+    },
+    logoutText: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: colors.error,
+    },
+  });
+}
 
 // ---------- Root ----------
-
 export default function ProfileTab() {
   const { isAuthenticated } = useAuth();
+  const { colors } = useSettings();
 
   return (
-    <SafeAreaView style={root.container} edges={[]}>
+    <SafeAreaView style={[{ flex: 1, backgroundColor: colors.background }]} edges={[]}>
       {isAuthenticated ? <UserProfile /> : <GuestView />}
     </SafeAreaView>
   );
 }
-
-const root = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-});

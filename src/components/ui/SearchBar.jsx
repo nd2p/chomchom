@@ -1,13 +1,16 @@
 import React from 'react';
 import { View, TextInput, StyleSheet } from 'react-native';
+import { useSettings } from '../../features/settings/hooks';
 
 const SearchBar = ({ placeholder = 'Tìm kiếm truyện...', onChangeText, value }) => {
+  const { colors } = useSettings();
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.surface }]}>
       <TextInput
-        style={styles.searchInput}
+        style={[styles.searchInput, { backgroundColor: colors.card, color: colors.text }]}
         placeholder={placeholder}
-        placeholderTextColor="#999"
+        placeholderTextColor={colors.textMuted}
         onChangeText={onChangeText}
         value={value}
       />
@@ -18,15 +21,12 @@ const SearchBar = ({ placeholder = 'Tìm kiếm truyện...', onChangeText, valu
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 16,
-    backgroundColor: '#ffffff',
   },
   searchInput: {
-    backgroundColor: '#f3f4f6',
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#666',
   },
 });
 

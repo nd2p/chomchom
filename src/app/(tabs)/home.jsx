@@ -1,54 +1,61 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { colors } from '../../theme/colors';
+import { useTranslation } from 'react-i18next';
 import SearchBar from '../../components/ui/SearchBar';
 import StoryCard from '../../features/comics/components/StoryCard';
 import { getRecommendedComics, getReadingHistory, getPopularComics } from '../../features/comics/api';
 import { apiBaseURL } from '../../services/api/axios';
 import { useAuth } from '../../features/auth/hooks';
+import { useSettings } from '../../features/settings/hooks';
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  searchBarWrapper: {
-    backgroundColor: '#ffffff',
-    zIndex: 10,
-  },
-  scrollContent: {
-    paddingBottom: 80,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.primary,
-    marginBottom: 12,
-    marginTop: 20,
-    paddingHorizontal: 16,
-  },
-  horizontalScroll: {
-    marginBottom: 20,
-    paddingHorizontal: 16,
-  },
-  listContent: {
-    backgroundColor: '#ffffff',
-    borderRadius: 8,
-    marginHorizontal: 16,
-  },
-  emptyMessage: {
-    textAlign: 'center',
-    color: colors.textSecondary,
-    fontSize: 14,
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-  },
-});
+function makeStyles(colors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    searchBarWrapper: {
+      backgroundColor: colors.surface,
+      zIndex: 10,
+    },
+    scrollContent: {
+      paddingBottom: 80,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.primary,
+      marginBottom: 12,
+      marginTop: 20,
+      paddingHorizontal: 16,
+    },
+    horizontalScroll: {
+      marginBottom: 20,
+      paddingHorizontal: 16,
+    },
+    listContent: {
+      backgroundColor: colors.card,
+      borderRadius: 8,
+      marginHorizontal: 16,
+    },
+    emptyMessage: {
+      textAlign: 'center',
+      color: colors.textSecondary,
+      fontSize: 14,
+      paddingVertical: 24,
+      paddingHorizontal: 16,
+    },
+  });
+}
 
 export default function Home() {
   const navigation = useNavigation();
   const { isAuthenticated } = useAuth();
+  const { colors } = useSettings();
+  const { t } = useTranslation();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [recommendedComics, setRecommendedComics] = useState([]);
   const [recentlyRead, setRecentlyRead] = useState([]);
@@ -124,7 +131,7 @@ export default function Home() {
           ? histories.map((history) => ({
             id: history?._id,
             title: history?.comic?.title || 'N/A',
-            author: extractAuthorFromParentheses(history?.comic?.title) || 'N/A',
+            author:  history?.comic?.author || 'N/A',
             cover: history?.comic?.coverImage,
             chapters: history?.comic?.totalChapters,
             views: history?.comic?.views,
@@ -146,7 +153,7 @@ export default function Home() {
 
   const RecommendedSection = () => (
     <>
-      <Text style={styles.sectionTitle}>Được Đề Xuất</Text>
+      <Text style={styles.sectionTitle}>{t('home.recommended')}</Text>
       <FlatList
         horizontal
         data={recommendedComics}
@@ -172,9 +179,9 @@ export default function Home() {
 
   const RecentlyReadSection = () => (
     <>
-      <Text style={styles.sectionTitle}>Đọc Gần Đây</Text>
+      <Text style={styles.sectionTitle}>{t('home.recentlyRead')}</Text>
       {!isAuthenticated ? (
-        <Text style={styles.emptyMessage}>Hãy đăng nhập để xem tính năng này</Text>
+        <Text style={styles.emptyMessage}>{t('home.loginRequired')}</Text>
       ) : recentlyRead.length > 0 ? (
         <FlatList
           horizontal
@@ -197,13 +204,13 @@ export default function Home() {
           nestedScrollEnabled={true}
         />
       ) : (
-        <Text style={styles.emptyMessage}>Chưa có lịch sử đọc</Text>
+        <Text style={styles.emptyMessage}>{t('home.noHistory')}</Text>
       )}
     </>
   );
 
   const PopularHeader = () => (
-    <Text style={styles.sectionTitle}>Phổ Biến</Text>
+    <Text style={styles.sectionTitle}>{t('home.popular')}</Text>
   );
 
   const ListHeader = () => (
@@ -218,7 +225,7 @@ export default function Home() {
     <View style={styles.container}>
       <View style={styles.searchBarWrapper}>
         <SearchBar
-          placeholder="Tìm kiếm truyện..."
+          placeholder={t('home.searchPlaceholder')}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />

@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
+    "@react-native-async-storage/async-storage": "^3.0.1",
     "@react-navigation/native": "^7.1.31",
     "@react-navigation/stack": "^7.8.2",
     "axios": "^1.13.6",
@@ -22,8 +23,10 @@
     "expo-linking": "^8.0.11",
     "expo-router": "~6.0.22",
     "expo-status-bar": "~3.0.9",
+    "i18next": "^25.8.18",
     "react": "19.1.0",
     "react-hook-form": "^7.71.2",
+    "react-i18next": "^16.5.8",
     "react-native": "0.81.5",
     "react-native-gesture-handler": "^2.30.0",
     "react-native-pager-view": "^8.0.0",
