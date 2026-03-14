@@ -12,16 +12,15 @@ import {
   Alert,
   StatusBar,
 } from 'react-native';
-import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { colors } from '../../theme/colors';
+import { useAuth } from '../../features/auth/hooks';
+import { getReadingHistory, likeComic } from '../../features/bookmarks/api';
+import { getComicDetails, getComicReviews, createReview } from '../../services/api/comics';
+import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
 import { useSettings } from '../../features/settings/hooks';
-import { likeComic } from '../../features/bookmarks/api';
-import {
-  getComicDetails,
-  getComicReviews,
-  createReview,
-} from '../../services/api/comics';
 
 const { width } = Dimensions.get('window');
 
@@ -521,6 +520,7 @@ function makeStyles(colors) {
 }
 
 export default function StoryDetail() {
+  const { isAuthenticated } = useAuth();
   const navigation = useNavigation();
   const route = useRoute();
   const { t, i18n } = useTranslation();
@@ -545,13 +545,14 @@ export default function StoryDetail() {
     return chapters.find((chap) => chap._id === lastChapterId);
   }, [lastChapterId, chapters]);
 
+  // Helper to normalize status from API
   useFocusEffect(
     React.useCallback(() => {
       if (!comicId) return;
       AsyncStorage.getItem(`history_${comicId}`).then((saved) => {
         if (saved) setLastChapterId(JSON.parse(saved).chapterId);
       });
-    }, [comicId]),
+    }, [comicId])
   );
 
   const getStatusText = (status) => {
@@ -583,6 +584,7 @@ export default function StoryDetail() {
         setComic(comicData);
         setChapters(comicData?.chapters || []);
         setReviews(reviewsRes?.comments || []);
+        setIsLiked(comicRes?.isLiked || false);
       } catch (error) {
         console.log('Failed to fetch comic details', error);
       } finally {
@@ -591,6 +593,30 @@ export default function StoryDetail() {
     };
     fetchComicDetails();
   }, [comicId]);
+
+  const handleBack = () => {
+    navigation.goBack();
+  };
+
+  useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        if (!isAuthenticated || !comicId) return;
+
+        const historyList = await getReadingHistory();
+
+        const history = historyList.find((item) => item?.comic?._id === comicId);
+
+        if (history?.chapter?._id) {
+          setLastChapterId(history.chapter._id);
+        }
+      } catch (error) {
+        console.log('Load history error:', error);
+      }
+    };
+
+    loadHistory();
+  }, [comicId, isAuthenticated]);
 
   const handleChapterPress = (chapterId) => {
     navigation.navigate('ChapterDetail', { chapterId, comicId });
@@ -604,12 +630,12 @@ export default function StoryDetail() {
   };
 
   const handleToggleFollow = async () => {
+    if (!isAuthenticated) {
+      Alert.alert('Yêu cầu đăng nhập', 'Bạn cần đăng nhập để theo dõi truyện này!');
+      return;
+    }
+
     try {
-      const token = await AsyncStorage.getItem('userToken');
-      if (!token) {
-        Alert.alert(t('story.detail.followLoginTitle'), t('story.detail.followLoginMessage'));
-        return;
-      }
       setIsLiked((prev) => !prev);
       await likeComic(comicId);
     } catch (error) {
@@ -638,26 +664,29 @@ export default function StoryDetail() {
       ? t('common.loading')
       : t('story.detail.readNow');
 
-  const renderChapter = ({ item, index }) => (
-    <TouchableOpacity
-      style={styles.chapterItem}
-      onPress={() => handleChapterPress(item._id || item.id)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.chapterLeft}>
-        <View style={styles.chapterNumberBadge}>
-          <Text style={styles.chapterNumber}>{chapters.length - index}</Text>
+  const renderChapter = ({ item }) => {
+    return (
+      <TouchableOpacity
+        key={item._id || item.id}
+        style={styles.chapterItem}
+        onPress={() => handleChapterPress(item._id || item.id)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.chapterLeft}>
+          <View style={styles.chapterNumberBadge}>
+            <Text style={styles.chapterNumber}>{item.chapterNumber}</Text>
+          </View>
+          <View style={styles.chapterInfo}>
+            <Text style={styles.chapterTitle}>{item.title}</Text>
+            <Text style={styles.chapterTime}>{formatDate(item.updatedAt)}</Text>
+          </View>
         </View>
-        <View style={styles.chapterInfo}>
-          <Text style={styles.chapterTitle}>{item.title}</Text>
-          <Text style={styles.chapterTime}>{formatDate(item.updatedAt)}</Text>
+        <View style={styles.chapterRight}>
+          <Text style={styles.chapterArrow}>›</Text>
         </View>
-      </View>
-      <View style={styles.chapterRight}>
-        <Text style={styles.chapterArrow}>›</Text>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   if (loading) {
     return (
@@ -801,7 +830,11 @@ export default function StoryDetail() {
         {activeTab === 'chapter' && (
           <View style={styles.tabContent}>
             <View style={styles.inlineActionSection}>
-              <TouchableOpacity style={styles.readButton} onPress={handleReadNow} activeOpacity={0.8}>
+              <TouchableOpacity
+                style={styles.readButton}
+                onPress={handleReadNow}
+                activeOpacity={0.8}
+              >
                 <Text style={styles.readButtonIcon}>▶</Text>
                 <Text style={styles.readButtonText}>{readButtonLabel}</Text>
               </TouchableOpacity>
@@ -823,7 +856,7 @@ export default function StoryDetail() {
                 </View>
               </View>
               <View style={styles.chaptersList}>
-                {chapters.map((item, index) => renderChapter({ item, index }))}
+                {chapters.map((item) => renderChapter({ item }))}
               </View>
             </View>
           </View>
@@ -843,7 +876,9 @@ export default function StoryDetail() {
                 <View style={styles.starRating}>
                   {[1, 2, 3, 4, 5].map((star) => (
                     <TouchableOpacity key={star} onPress={() => setReviewRating(star)}>
-                      <Text style={[styles.starIcon, star <= reviewRating && styles.starIconActive]}>
+                      <Text
+                        style={[styles.starIcon, star <= reviewRating && styles.starIconActive]}
+                      >
                         ★
                       </Text>
                     </TouchableOpacity>

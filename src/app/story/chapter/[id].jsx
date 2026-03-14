@@ -19,8 +19,8 @@ import { useTranslation } from 'react-i18next';
 import { useSettings } from '../../../features/settings/hooks';
 import { getChaptersByComic, getChapterById } from '../../../features/chapters/api';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { updateReadingHistory } from '../../../features/bookmarks/api';
+import { useAuth } from '../../../features/auth/hooks';
 
 const { width } = Dimensions.get('window');
 const ITEM_HEIGHT = 64;
@@ -140,6 +140,7 @@ export default function ChapterDetail() {
   const { colors } = useSettings();
   const { t } = useTranslation();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { isAuthenticated } = useAuth();
 
   const [chapter, setChapter] = useState(null);
   const [chapters, setChapters] = useState([]);
@@ -148,7 +149,7 @@ export default function ChapterDetail() {
   const [chapterModal, setChapterModal] = useState(false);
   const [sortOrder, setSortOrder] = useState('asc');
   const [imageLoading, setImageLoading] = useState({});
-  
+
   const chapterListRef = useRef(null);
   const uiAnim = useRef(new Animated.Value(1)).current;
   const lastScrollY = useRef(0);
@@ -157,9 +158,9 @@ export default function ChapterDetail() {
   const sortedChapters = useMemo(
     () =>
       [...chapters].sort((a, b) =>
-        sortOrder === 'asc' ? a.chapterNumber - b.chapterNumber : b.chapterNumber - a.chapterNumber,
+        sortOrder === 'asc' ? a.chapterNumber - b.chapterNumber : b.chapterNumber - a.chapterNumber
       ),
-    [chapters, sortOrder],
+    [chapters, sortOrder]
   );
 
   const currentIndex = chapters.findIndex((c) => c._id === chapter?._id);
@@ -197,21 +198,9 @@ export default function ChapterDetail() {
 
   const saveReading = async () => {
     try {
-      const key = `history_${comicId}`;
+      if (!isAuthenticated) return;
 
-      const historyData = {
-        chapterId,
-        updatedAt: new Date().getTime(),
-      };
-
-      await AsyncStorage.setItem(key, JSON.stringify(historyData));
-
-      const token = await AsyncStorage.getItem('userToken');
-      if (token) {
-        await updateReadingHistory(comicId, chapterId);
-      } else {
-        console.log('Đã cập nhật lịch sử đọc offline!');
-      }
+      await updateReadingHistory(comicId, chapterId);
     } catch (error) {
       console.log('Save history error:', error);
     }
@@ -267,13 +256,19 @@ export default function ChapterDetail() {
 
   const goPrev = () => {
     if (currentIndex > 0) {
-      navigation.replace('ChapterDetail', { chapterId: chapters[currentIndex - 1]._id, comicId: comicId });
+      navigation.replace('ChapterDetail', {
+        chapterId: chapters[currentIndex - 1]._id,
+        comicId: comicId,
+      });
     }
   };
 
   const goNext = () => {
     if (currentIndex < chapters.length - 1) {
-      navigation.replace('ChapterDetail', { chapterId: chapters[currentIndex + 1]._id, comicId: comicId });
+      navigation.replace('ChapterDetail', {
+        chapterId: chapters[currentIndex + 1]._id,
+        comicId: comicId,
+      });
     }
   };
 
