@@ -5,6 +5,7 @@ export default {
     cancel: 'Huỷ',
     confirm: 'Xác nhận',
     or: 'hoặc',
+    na: 'N/A',
   },
   auth: {
     login: {
@@ -58,6 +59,19 @@ export default {
     loginRequired: 'Hãy đăng nhập để xem tính năng này',
     noHistory: 'Chưa có lịch sử đọc',
     goBack: 'Quay lại',
+    filter: {
+      base: 'Tất cả truyện',
+      status: {
+        completed: 'hoàn thành',
+        ongoing: 'đang ra',
+      },
+      sort: {
+        latest: 'ngày cập nhật',
+        viewsDesc: 'lượt xem',
+      },
+      genrePart: ' có thể loại {{genres}}',
+      sortPart: ' sắp xếp theo {{sort}}',
+    },
   },
   bookmarks: {
     title: 'Tủ sách của tôi',
@@ -130,6 +144,30 @@ export default {
     status: {
       completed: 'Hoàn thành',
       ongoing: 'Đang viết',
+    },
+    detail: {
+      defaultTitle: 'Chi tiết truyện',
+      reads: 'lượt đọc',
+      status: 'Trạng thái',
+      updated: 'Cập nhật',
+      tabChapter: 'Chương',
+      author: 'Tác giả',
+      genre: 'Thể loại',
+      description: 'Nội dung',
+      updating: 'Đang cập nhật',
+      expand: 'Xem thêm',
+      collapse: 'Thu gọn',
+      readNow: 'Đọc ngay',
+      readContinue: 'Tiếp tục: C.{{chapter}}',
+      following: 'Đang theo dõi',
+      follow: '+ Theo dõi',
+      followLoginTitle: 'Yêu cầu đăng nhập',
+      followLoginMessage: 'Bạn cần đăng nhập để theo dõi truyện này!',
+      followError: 'Không thể thay đổi trạng thái theo dõi lúc này.',
+      reviews: 'Đánh giá',
+      reviewPlaceholder: 'Viết đánh giá...',
+      send: 'Gửi',
+      noReviews: 'Chưa có đánh giá nào',
     },
   },
   settings: {

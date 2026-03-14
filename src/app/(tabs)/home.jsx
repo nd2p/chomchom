@@ -20,7 +20,7 @@ function makeStyles(colors) {
       backgroundColor: colors.background,
     },
     searchBarWrapper: {
-      backgroundColor: colors.surface,
+      backgroundColor: colors.background,
       flexDirection: 'row',
       alignItems: 'center',
       paddingRight: 10,
@@ -118,6 +118,8 @@ export default function Home() {
     return String(item?.id ?? item?._id ?? item?.slug ?? item?.title ?? `comic-${index}`);
   };
 
+  const naText = t('common.na');
+
   useEffect(() => {
     const fetchComics = async () => {
       try {
@@ -126,8 +128,8 @@ export default function Home() {
         const normalizedComics = Array.isArray(comics)
           ? comics.map((comic) => ({
             id: comic?._id,
-            title: comic?.title || 'N/A',
-            author: comic?.author || 'N/A',
+            title: comic?.title || naText,
+            author: comic?.author || naText,
             cover: comic?.coverImage,
             chapters: comic?.totalChapters,
             views: comic?.views,
@@ -154,8 +156,8 @@ export default function Home() {
         const normalized = Array.isArray(comics)
           ? comics.map((comic) => ({
             id: comic?._id,
-            title: comic?.title || 'N/A',
-            author: comic?.author || 'N/A',
+            title: comic?.title || naText,
+            author: comic?.author || naText,
             cover: comic?.coverImage,
             chapters: comic?.totalChapters,
             views: comic?.views,
@@ -183,8 +185,8 @@ export default function Home() {
         const normalizedHistories = Array.isArray(histories)
           ? histories.map((history) => ({
             id: history?._id,
-            title: history?.comic?.title || 'N/A',
-            author: history?.comic?.author || 'N/A',
+            title: history?.comic?.title || naText,
+            author: history?.comic?.author || naText,
             cover: history?.comic?.coverImage,
             chapters: history?.comic?.totalChapters,
             views: history?.comic?.views,
@@ -221,8 +223,8 @@ export default function Home() {
       const normalized = Array.isArray(comics)
         ? comics.map((comic) => ({
           id: comic?._id,
-          title: comic?.title || 'N/A',
-          author: comic?.author || 'N/A',
+          title: comic?.title || naText,
+          author: comic?.author || naText,
           cover: comic?.coverImage,
           chapters: comic?.totalChapters,
           views: comic?.views,
@@ -272,8 +274,8 @@ export default function Home() {
       const normalized = Array.isArray(comics)
         ? comics.map((comic) => ({
           id: comic?._id,
-          title: comic?.title || 'N/A',
-          author: comic?.author || 'N/A',
+          title: comic?.title || naText,
+          author: comic?.author || naText,
           cover: comic?.coverImage,
           chapters: comic?.totalChapters,
           views: comic?.views,
@@ -300,12 +302,12 @@ export default function Home() {
   const getFilterTitle = () => {
     const statusMap = {
       all: '',
-      completed: 'hoàn thành',
-      ongoing: 'đang ra',
+      completed: t('home.filter.status.completed'),
+      ongoing: t('home.filter.status.ongoing'),
     };
     const sortMap = {
-      latest: 'ngày cập nhật',
-      viewsDesc: 'lượt xem',
+      latest: t('home.filter.sort.latest'),
+      viewsDesc: t('home.filter.sort.viewsDesc'),
     };
 
     const statusPart = statusMap[selectedStatus] ? ` ${statusMap[selectedStatus]}` : '';
@@ -313,10 +315,14 @@ export default function Home() {
       .filter((g) => selectedGenres.includes(g._id))
       .map((g) => g.name)
       .join(', ');
-    const genrePart = genreNames ? ` có thể loại ${genreNames}` : '';
-    const sortPart = ` sắp xếp theo ${sortMap[selectedSort]}`;
+    const genrePart = genreNames
+      ? t('home.filter.genrePart', { genres: genreNames })
+      : '';
+    const sortPart = t('home.filter.sortPart', {
+      sort: sortMap[selectedSort] || t('home.filter.sort.latest'),
+    });
 
-    return `Tất cả truyện${statusPart}${genrePart}${sortPart}`;
+    return `${t('home.filter.base')}${statusPart}${genrePart}${sortPart}`;
   };
 
   const handleScroll = (event) => {

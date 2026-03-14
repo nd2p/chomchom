@@ -1,18 +1,37 @@
 import React, { createContext, useEffect, useRef, useReducer } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setupInterceptors } from '../../services/api/interceptors';
+
+const AUTH_TOKEN_KEY = '@auth/token';
+const AUTH_USER_KEY = '@auth/user';
 
 const initialState = {
   user: null,
   token: null,
   isAuthenticated: false,
+  isRestoring: true,
 };
 
 function authReducer(state, action) {
   switch (action.type) {
+    case 'RESTORE_SESSION':
+      return {
+        user: action.payload.user,
+        token: action.payload.token,
+        isAuthenticated: true,
+        isRestoring: false,
+      };
+    case 'RESTORE_DONE':
+      return { ...state, isRestoring: false };
     case 'LOGIN':
-      return { user: action.payload.user, token: action.payload.token, isAuthenticated: true };
+      return {
+        user: action.payload.user,
+        token: action.payload.token,
+        isAuthenticated: true,
+        isRestoring: false,
+      };
     case 'LOGOUT':
-      return initialState;
+      return { ...initialState, isRestoring: false };
     default:
       return state;
   }
@@ -30,17 +49,51 @@ export function AuthProvider({ children }) {
     tokenRef.current = state.token;
   }, [state.token]);
 
+  // Restore session from storage on mount.
+  useEffect(() => {
+    async function restoreSession() {
+      try {
+        const [token, userJson] = await Promise.all([
+          AsyncStorage.getItem(AUTH_TOKEN_KEY),
+          AsyncStorage.getItem(AUTH_USER_KEY),
+        ]);
+        if (token && userJson) {
+          dispatch({ type: 'RESTORE_SESSION', payload: { token, user: JSON.parse(userJson) } });
+        } else {
+          dispatch({ type: 'RESTORE_DONE' });
+        }
+      } catch {
+        dispatch({ type: 'RESTORE_DONE' });
+      }
+    }
+    restoreSession();
+  }, []);
+
+  const logout = async () => {
+    await Promise.all([
+      AsyncStorage.removeItem(AUTH_TOKEN_KEY),
+      AsyncStorage.removeItem(AUTH_USER_KEY),
+    ]);
+    dispatch({ type: 'LOGOUT' });
+  };
+
   // Register the interceptor ONCE on mount only.
   useEffect(() => {
     const cleanup = setupInterceptors({
       getToken: () => tokenRef.current,
+      onUnauthorized: logout,
     });
     return cleanup;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const login = (user, token) => dispatch({ type: 'LOGIN', payload: { user, token } });
-
-  const logout = () => dispatch({ type: 'LOGOUT' });
+  const login = async (user, token) => {
+    await Promise.all([
+      AsyncStorage.setItem(AUTH_TOKEN_KEY, token),
+      AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(user)),
+    ]);
+    dispatch({ type: 'LOGIN', payload: { user, token } });
+  };
 
   return (
     <AuthContext.Provider value={{ ...state, login, logout }}>{children}</AuthContext.Provider>

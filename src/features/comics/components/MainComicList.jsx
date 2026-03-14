@@ -11,7 +11,6 @@ function makeStyles(colors) {
       paddingBottom: 80,
     },
     listContent: {
-      backgroundColor: colors.card,
       borderRadius: 8,
       marginHorizontal: 16,
     },

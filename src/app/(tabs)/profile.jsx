@@ -50,9 +50,6 @@ function UserProfile() {
 
   const menuItems = [
     { icon: 'person-outline', label: t('profile.menu.editProfile') },
-    { icon: 'bookmark-outline', label: t('profile.menu.myBookmarks') },
-    { icon: 'time-outline', label: t('profile.menu.readingHistory') },
-    { icon: 'download-outline', label: t('profile.menu.downloads') },
     { icon: 'notifications-outline', label: t('profile.menu.notifications') },
     { icon: 'settings-outline', label: t('profile.menu.settings'), route: '/settings' },
     { icon: 'help-circle-outline', label: t('profile.menu.helpFeedback') },
@@ -116,7 +113,6 @@ function UserProfile() {
       <View style={prof.statsRow}>
         {[
           { label: t('profile.stats.reading'), value: '0' },
-          { label: t('profile.stats.bookmarks'), value: '0' },
           { label: t('profile.stats.completed'), value: '0' },
         ].map((s, i, arr) => (
           <React.Fragment key={s.label}>
