@@ -148,7 +148,7 @@ export default function ChapterDetail() {
   const [chapterModal, setChapterModal] = useState(false);
   const [sortOrder, setSortOrder] = useState('asc');
   const [imageLoading, setImageLoading] = useState({});
-
+  
   const chapterListRef = useRef(null);
   const uiAnim = useRef(new Animated.Value(1)).current;
   const lastScrollY = useRef(0);
