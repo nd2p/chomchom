@@ -34,32 +34,6 @@ export default function StoryDetail() {
         setChapters(comicData?.chapters || []);
       } catch (error) {
         console.log('Failed to fetch comic details', error);
-        // Mock data
-        setComic({
-          title: 'Yêu Anh Từ Lần Gặp Đầu Tiên',
-          coverImage: 'https://picsum.photos/300/450?random=1',
-          author: 'Nguyễn Minh Châu',
-          description: 'Một tình yêu bắt đầu từ lần gặp gỡ tình cờ. Câu chuyện kể về Minh - một chàng trai trẻ vô tình gặp Linh trong quán cà phê. Từ đó, những rung động đầu tiên đã nảy sinh. Liệu tình yêu có đến với họ? Hãy cùng theo dõi câu chuyện tình yêu ngọt ngào này.',
-          genres: [
-            { name: 'Tình cảm' },
-            { name: 'Lãng mạn' },
-            { name: 'Hiện đại' },
-          ],
-          views: 125000,
-          rating: 4.8,
-          totalChapters: 45,
-          status: 'Đang ra',
-          updatedAt: '2 giờ trước',
-        });
-        setChapters([
-          { _id: '1', title: 'Chương 45', updatedAt: '2 giờ trước' },
-          { _id: '2', title: 'Chương 44', updatedAt: '1 ngày trước' },
-          { _id: '3', title: 'Chương 43', updatedAt: '2 ngày trước' },
-          { _id: '4', title: 'Chương 42', updatedAt: '3 ngày trước' },
-          { _id: '5', title: 'Chương 41', updatedAt: '1 tuần trước' },
-          { _id: '6', title: 'Chương 40', updatedAt: '2 tuần trước' },
-          { _id: '7', title: 'Chương 39', updatedAt: '3 tuần trước' },
-        ]);
       } finally {
         setLoading(false);
       }
@@ -79,7 +53,10 @@ export default function StoryDetail() {
   };
 
   const handleChapterPress = (chapterId) => {
-    console.log('Chapter pressed:', chapterId);
+    navigation.navigate('ChapterDetail', {
+      chapterId,
+      comicId,
+    });
   };
 
   const handleReadNow = () => {
@@ -133,11 +110,7 @@ export default function StoryDetail() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        bounces={false}
-      >
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} bounces={false}>
         {/* Hero Section with Cover */}
         <View style={styles.heroSection}>
           <Image
@@ -202,18 +175,11 @@ export default function StoryDetail() {
 
         {/* Action Buttons */}
         <View style={styles.actionSection}>
-          <TouchableOpacity
-            style={styles.readButton}
-            onPress={handleReadNow}
-            activeOpacity={0.8}
-          >
+          <TouchableOpacity style={styles.readButton} onPress={handleReadNow} activeOpacity={0.8}>
             <Text style={styles.readButtonIcon}>▶</Text>
             <Text style={styles.readButtonText}>Đọc ngay</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.followButton}
-            activeOpacity={0.8}
-          >
+          <TouchableOpacity style={styles.followButton} activeOpacity={0.8}>
             <Text style={styles.followButtonText}>+ Theo dõi</Text>
           </TouchableOpacity>
         </View>
@@ -221,19 +187,12 @@ export default function StoryDetail() {
         {/* Description */}
         <View style={styles.descriptionSection}>
           <Text style={styles.sectionTitle}>Nội dung</Text>
-          <Text
-            style={styles.description}
-            numberOfLines={showFullDescription ? undefined : 3}
-          >
+          <Text style={styles.description} numberOfLines={showFullDescription ? undefined : 3}>
             {comic?.description}
           </Text>
           {comic?.description && comic.description.length > 100 && (
-            <TouchableOpacity
-              onPress={() => setShowFullDescription(!showFullDescription)}
-            >
-              <Text style={styles.readMore}>
-                {showFullDescription ? 'Thu gọn' : 'Xem thêm'}
-              </Text>
+            <TouchableOpacity onPress={() => setShowFullDescription(!showFullDescription)}>
+              <Text style={styles.readMore}>{showFullDescription ? 'Thu gọn' : 'Xem thêm'}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -249,9 +208,7 @@ export default function StoryDetail() {
 
           <View style={styles.chaptersList}>
             {chapters.map((item, index) => (
-              <View key={item._id || index}>
-                {renderChapter({ item, index })}
-              </View>
+              <View key={item._id || index}>{renderChapter({ item, index })}</View>
             ))}
           </View>
         </View>

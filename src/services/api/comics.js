@@ -20,3 +20,8 @@ export async function getComicDetails(comicId) {
   const response = await axiosInstance.get(`/api/comics/${comicId}`);
   return response.data;
 }
+
+export async function getComicBySlug(slug) {
+  const response = await axiosInstance.get(`/api/comics/slug/${slug}`);
+  return response.data;
+}
