@@ -2,16 +2,18 @@ import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
+  TextInput,
   StyleSheet,
   ScrollView,
   Image,
   TouchableOpacity,
   FlatList,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
-import { getComicDetails } from '../../services/api/comics';
+import { getComicDetails, getComicReviews, createReview } from '../../services/api/comics';
 
 const { width } = Dimensions.get('window');
 
@@ -24,50 +26,52 @@ export default function StoryDetail() {
   const [chapters, setChapters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showFullDescription, setShowFullDescription] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'chapter', or 'review'
+  const [reviews, setReviews] = useState([]);
+  const [reviewText, setReviewText] = useState('');
+  const [reviewRating, setReviewRating] = useState(0);
+
+  // Helper to normalize status from API
+  const getStatusText = (status) => {
+    if (status === 'completed') return 'Hoàn thành';
+    if (status === 'ongoing') return 'Đang ra';
+  };
+
+  // Helper to format date
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  };
 
   useEffect(() => {
     const fetchComicDetails = async () => {
+      if (!comicId) {
+        setLoading(false);
+        return;
+      }
       try {
-        const res = await getComicDetails(comicId);
-        const comicData = res?.comic || res;
+        const [comicRes, reviewsRes] = await Promise.all([
+          getComicDetails(comicId),
+          getComicReviews(comicId)
+        ]);
+        const comicData = comicRes?.comic || comicRes;
         setComic(comicData);
         setChapters(comicData?.chapters || []);
+        setReviews(reviewsRes?.comments || []);
       } catch (error) {
-        console.log('Failed to fetch comic details', error);
-        // Mock data
-        setComic({
-          title: 'Yêu Anh Từ Lần Gặp Đầu Tiên',
-          coverImage: 'https://picsum.photos/300/450?random=1',
-          author: 'Nguyễn Minh Châu',
-          description: 'Một tình yêu bắt đầu từ lần gặp gỡ tình cờ. Câu chuyện kể về Minh - một chàng trai trẻ vô tình gặp Linh trong quán cà phê. Từ đó, những rung động đầu tiên đã nảy sinh. Liệu tình yêu có đến với họ? Hãy cùng theo dõi câu chuyện tình yêu ngọt ngào này.',
-          genres: [
-            { name: 'Tình cảm' },
-            { name: 'Lãng mạn' },
-            { name: 'Hiện đại' },
-          ],
-          views: 125000,
-          rating: 4.8,
-          totalChapters: 45,
-          status: 'Đang ra',
-          updatedAt: '2 giờ trước',
-        });
-        setChapters([
-          { _id: '1', title: 'Chương 45', updatedAt: '2 giờ trước' },
-          { _id: '2', title: 'Chương 44', updatedAt: '1 ngày trước' },
-          { _id: '3', title: 'Chương 43', updatedAt: '2 ngày trước' },
-          { _id: '4', title: 'Chương 42', updatedAt: '3 ngày trước' },
-          { _id: '5', title: 'Chương 41', updatedAt: '1 tuần trước' },
-          { _id: '6', title: 'Chương 40', updatedAt: '2 tuần trước' },
-          { _id: '7', title: 'Chương 39', updatedAt: '3 tuần trước' },
-        ]);
+        // Keep empty on error - will show empty state
       } finally {
         setLoading(false);
       }
     };
 
-    if (comicId) {
-      fetchComicDetails();
-    }
+    fetchComicDetails();
   }, [comicId]);
 
   const handleBack = () => {
@@ -75,16 +79,32 @@ export default function StoryDetail() {
   };
 
   const handleBookmark = () => {
-    console.log('Bookmark pressed');
+    // Handle bookmark
   };
 
   const handleChapterPress = (chapterId) => {
-    console.log('Chapter pressed:', chapterId);
+    // Handle chapter navigation
   };
 
   const handleReadNow = () => {
     if (chapters.length > 0) {
       handleChapterPress(chapters[0]._id);
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    if (!reviewText.trim() || reviewRating === 0) {
+      return;
+    }
+    try {
+      await createReview(comicId, reviewText, reviewRating);
+      // Refresh reviews
+      const reviewsRes = await getComicReviews(comicId);
+      setReviews(reviewsRes?.comments || []);
+      setReviewText('');
+      setReviewRating(0);
+    } catch (error) {
+      // Handle error silently
     }
   };
 
@@ -100,7 +120,7 @@ export default function StoryDetail() {
         </View>
         <View style={styles.chapterInfo}>
           <Text style={styles.chapterTitle}>{item.title}</Text>
-          <Text style={styles.chapterTime}>{item.updatedAt}</Text>
+          <Text style={styles.chapterTime}>{formatDate(item.updatedAt)}</Text>
         </View>
       </View>
       <View style={styles.chapterRight}>
@@ -109,10 +129,12 @@ export default function StoryDetail() {
     </TouchableOpacity>
   );
 
+  // Skip loading screen - show content directly
+  // if (loading) {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <View style={styles.loadingSpinner} />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Đang tải thông tin...</Text>
       </View>
     );
@@ -160,7 +182,7 @@ export default function StoryDetail() {
               {/* Rating Stars */}
               <View style={styles.ratingRow}>
                 <Text style={styles.ratingStars}>★</Text>
-                <Text style={styles.ratingValue}>{comic?.rating?.toFixed(1) || '0.0'}</Text>
+                <Text style={styles.ratingValue}>{String(comic?.rating?.toFixed(1) || '0.0')}</Text>
                 <Text style={styles.ratingDivider}>|</Text>
                 <Text style={styles.viewsValue}>{comic?.views?.toLocaleString() || '0'}</Text>
                 <Text style={styles.viewsLabel}> lượt đọc</Text>
@@ -172,22 +194,22 @@ export default function StoryDetail() {
         {/* Stats Cards */}
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>{comic?.totalChapters || '0'}</Text>
+            <Text style={styles.statValue}>{chapters?.length || '0'}</Text>
             <Text style={styles.statLabel}>Chương</Text>
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>
-              {comic?.status === 'Đang ra' ? 'Đang ra' : 'Hoàn thành'}
+              {getStatusText(comic?.status)}
             </Text>
             <Text style={styles.statLabel}>Trạng thái</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>{comic?.updatedAt || ''}</Text>
+            <Text style={styles.statValue}>{formatDate(comic?.updatedAt) || ''}</Text>
             <Text style={styles.statLabel}>Cập nhật</Text>
           </View>
         </View>
 
-        {/* Genres */}
+        {/* Genres
         <View style={styles.genresSection}>
           <View style={styles.genresRow}>
             {comic?.genres?.map((genre, index) => (
@@ -198,66 +220,186 @@ export default function StoryDetail() {
               </View>
             ))}
           </View>
-        </View>
+        </View> */}
 
-        {/* Action Buttons */}
-        <View style={styles.actionSection}>
+        {/* Tabs: Overview / Chapter / Review */}
+        <View style={styles.tabsContainer}>
           <TouchableOpacity
-            style={styles.readButton}
-            onPress={handleReadNow}
-            activeOpacity={0.8}
+            style={[styles.tab, activeTab === 'overview' && styles.tabActive]}
+            onPress={() => setActiveTab('overview')}
           >
-            <Text style={styles.readButtonIcon}>▶</Text>
-            <Text style={styles.readButtonText}>Đọc ngay</Text>
+            <Text style={[styles.tabText, activeTab === 'overview' && styles.tabTextActive]}>
+              Overview
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.followButton}
-            activeOpacity={0.8}
+            style={[styles.tab, activeTab === 'chapter' && styles.tabActive]}
+            onPress={() => setActiveTab('chapter')}
           >
-            <Text style={styles.followButtonText}>+ Theo dõi</Text>
+            <Text style={[styles.tabText, activeTab === 'chapter' && styles.tabTextActive]}>
+              Chapter ({chapters.length})
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'review' && styles.tabActive]}
+            onPress={() => setActiveTab('review')}
+          >
+            <Text style={[styles.tabText, activeTab === 'review' && styles.tabTextActive]}>
+              Review
+            </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Description */}
-        <View style={styles.descriptionSection}>
-          <Text style={styles.sectionTitle}>Nội dung</Text>
-          <Text
-            style={styles.description}
-            numberOfLines={showFullDescription ? undefined : 3}
-          >
-            {comic?.description}
-          </Text>
-          {comic?.description && comic.description.length > 100 && (
-            <TouchableOpacity
-              onPress={() => setShowFullDescription(!showFullDescription)}
-            >
-              <Text style={styles.readMore}>
-                {showFullDescription ? 'Thu gọn' : 'Xem thêm'}
+        {/* Tab Content */}
+        {activeTab === 'overview' ? (
+          <View style={styles.tabContent}>
+            {/* Author */}
+            <View style={styles.overviewItem}>
+              <Text style={styles.overviewLabel}>Tác giả</Text>
+              <Text style={styles.overviewValue}>{comic?.author || 'Đang cập nhật'}</Text>
+            </View>
+
+            {/* Status */}
+            <View style={styles.overviewItem}>
+              <Text style={styles.overviewLabel}>Trạng thái</Text>
+              <Text style={styles.overviewValue}>{getStatusText(comic?.status)}</Text>
+            </View>
+
+            {/* Genres */}
+            <View style={styles.overviewItem}>
+              <Text style={styles.overviewLabel}>Thể loại</Text>
+              <View style={styles.genresRow}>
+                {comic?.genres?.map((genre, index) => (
+                  <View key={index} style={styles.genreBadge}>
+                    <Text style={styles.genreText}>
+                      {typeof genre === 'string' ? genre : genre?.name}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            {/* Description */}
+            <View style={styles.descriptionSection}>
+              <Text style={styles.sectionTitle}>Nội dung</Text>
+              <Text
+                style={styles.description}
+                numberOfLines={showFullDescription ? undefined : 5}
+              >
+                {comic?.description || 'Đang cập nhật...'}
               </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Chapters List */}
-        <View style={styles.chaptersSection}>
-          <View style={styles.chaptersHeader}>
-            <Text style={styles.sectionTitle}>Danh sách chương</Text>
-            <View style={styles.chapterCountBadge}>
-              <Text style={styles.chapterCount}>{chapters.length}</Text>
+              {comic?.description && comic.description.length > 100 && (
+                <TouchableOpacity
+                  onPress={() => setShowFullDescription(!showFullDescription)}
+                >
+                  <Text style={styles.readMore}>
+                    {showFullDescription ? 'Thu gọn' : 'Xem thêm'}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
-
-          <View style={styles.chaptersList}>
-            {chapters.map((item, index) => (
-              <View key={item._id || index}>
-                {renderChapter({ item, index })}
+        ) : activeTab === 'chapter' ? (
+          <View style={styles.tabContent}>
+            {/* Chapters List */}
+            <View style={styles.chaptersSection}>
+              <View style={styles.chaptersHeader}>
+                <Text style={styles.sectionTitle}>Danh sách chương</Text>
               </View>
-            ))}
-          </View>
-        </View>
 
-        <View style={styles.bottomSpacer} />
+              <View style={styles.chaptersList}>
+                {chapters.map((item, index) => (
+                  <View key={item._id || index}>
+                    {renderChapter({ item, index })}
+                  </View>
+                ))}
+              </View>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.tabContent}>
+            {/* Review Tab */}
+            <View style={styles.reviewHeader}>
+              <View style={styles.reviewHeaderLeft}>
+                <Text style={styles.reviewTitle}>Đánh giá</Text>
+                <Text style={styles.reviewStar}>★</Text>
+                <Text style={styles.reviewCount}>{reviews.length}</Text>
+              </View>
+            </View>
+
+            {/* Write Review */}
+            <View style={styles.writeReview}>
+              <View style={styles.writeReviewContent}>
+                {/* Star Rating */}
+                <View style={styles.starRating}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <TouchableOpacity key={star} onPress={() => setReviewRating(star)}>
+                      <Text style={[styles.starIcon, star <= reviewRating && styles.starIconActive]}>★</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <TextInput
+                  style={styles.reviewInput}
+                  placeholder="Viết đánh giá..."
+                  placeholderTextColor={colors.textMuted}
+                  value={reviewText}
+                  onChangeText={setReviewText}
+                  multiline
+                />
+              </View>
+              <TouchableOpacity style={styles.sendButton} onPress={handleSubmitReview}>
+                <Text style={styles.sendButtonText}>Gửi</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Reviews List */}
+            {reviews.length > 0 ? (
+              <View style={styles.reviewsList}>
+                {reviews.map((review) => (
+                  <View key={review.id} style={styles.reviewItem}>
+                    <Image source={{ uri: review.user.avatar }} style={styles.reviewAvatar} />
+                    <View style={styles.reviewContent}>
+                      <View style={styles.reviewHeaderRow}>
+                        <Text style={styles.reviewUser}>{review.user.name}</Text>
+                        <Text style={styles.reviewDate}>{formatDate(review.createdAt)}</Text>
+                      </View>
+                      <View style={styles.reviewStars}>
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Text key={star} style={[styles.reviewStarIcon, star <= review.rating && styles.reviewStarActive]}>★</Text>
+                        ))}
+                      </View>
+                      <Text style={styles.reviewText}>{review.content}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Text style={styles.reviewPlaceholder}>Chưa có đánh giá nào</Text>
+            )}
+          </View>
+        )}
       </ScrollView>
+
+      {/* Action Buttons - Fixed at bottom - Only show on Overview */}
+      {activeTab === 'overview' ? (
+      <View style={styles.actionSection}>
+        <TouchableOpacity
+          style={styles.readButton}
+          onPress={handleReadNow}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.readButtonIcon}>▶</Text>
+          <Text style={styles.readButtonText}>Đọc ngay</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.followButton}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.followButtonText}>+ Theo dõi</Text>
+        </TouchableOpacity>
+      </View>
+      ) : null}
+
     </View>
   );
 }
@@ -272,15 +414,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: colors.background,
-  },
-  loadingSpinner: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 3,
-    borderColor: colors.primary,
-    borderTopColor: 'transparent',
-    marginBottom: 16,
   },
   loadingText: {
     fontSize: 14,
@@ -320,6 +453,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    paddingBottom: 20,
   },
   heroSection: {
     width: width,
@@ -445,11 +579,186 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: '500',
   },
-  actionSection: {
+  tabsContainer: {
     flexDirection: 'row',
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    marginTop: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  tabActive: {
+    borderBottomWidth: 2,
+    borderBottomColor: colors.primary,
+  },
+  tabText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  tabTextActive: {
+    color: colors.primary,
+  },
+  tabContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  reviewSection: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  reviewTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  reviewPlaceholder: {
+    fontSize: 14,
+    color: colors.textMuted,
+  },
+  reviewHeader: {
+    marginBottom: 16,
+    paddingTop: 8,
+  },
+  reviewHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  reviewCount: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginLeft: 4,
+  },
+  reviewStar: {
+    fontSize: 16,
+    color: '#f59e0b',
+    marginLeft: 8,
+  },
+  writeReview: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    marginBottom: 16,
+    gap: 8,
+  },
+  writeReviewContent: {
+    flex: 1,
+  },
+  starRating: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  starIcon: {
+    fontSize: 24,
+    color: colors.border,
+    marginRight: 4,
+  },
+  starIconActive: {
+    color: '#f59e0b',
+  },
+  reviewInput: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 14,
+    color: colors.text,
+    maxHeight: 80,
+  },
+  sendButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  sendButtonText: {
+    color: colors.white,
+    fontWeight: '600',
+  },
+  reviewsList: {
+    marginTop: 8,
+  },
+  reviewItem: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  reviewAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  reviewContent: {
+    flex: 1,
+  },
+  reviewHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  reviewUser: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  reviewDate: {
+    fontSize: 12,
+    color: colors.textMuted,
+  },
+  reviewStars: {
+    flexDirection: 'row',
+    marginBottom: 4,
+  },
+  reviewStarIcon: {
+    fontSize: 12,
+    color: colors.border,
+    marginRight: 2,
+  },
+  reviewStarActive: {
+    color: '#f59e0b',
+  },
+  reviewText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    lineHeight: 20,
+  },
+  overviewItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  overviewLabel: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    flex: 1,
+  },
+  overviewValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+    flex: 2,
+    textAlign: 'right',
+  },
+  actionSection: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingBottom: 34,
     gap: 12,
+    backgroundColor: colors.background,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
   readButton: {
     flex: 1.5,
@@ -512,6 +821,7 @@ const styles = StyleSheet.create({
   },
   chaptersSection: {
     paddingHorizontal: 16,
+    marginTop: 16,
   },
   chaptersHeader: {
     flexDirection: 'row',
