@@ -11,13 +11,13 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../features/auth/hooks';
 import { authApi } from '../../features/auth/api';
 import { useSettings } from '../../features/settings/hooks';
 import RegisterScreen from '../(auth)/register';
 import LoginScreen from '../(auth)/login';
+import { useNavigation } from '@react-navigation/native';
 
 // ---------- Unauthenticated view ----------
 function GuestView() {
@@ -45,7 +45,7 @@ function UserProfile() {
   const { t } = useTranslation();
   const { top: topInset } = useSafeAreaInsets();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const router = useRouter();
+  const navigation = useNavigation();
   const prof = useMemo(() => makeStyles(colors), [colors]);
 
   const menuItems = [
@@ -79,14 +79,15 @@ function UserProfile() {
     ]);
   }
 
-  const initials = (user?.username || user?.name)
-    ? (user.username || user.name)
-      .split(' ')
-      .map((w) => w[0])
-      .slice(0, 2)
-      .join('')
-      .toUpperCase()
-    : '?';
+  const initials =
+    user?.username || user?.name
+      ? (user.username || user.name)
+          .split(' ')
+          .map((w) => w[0])
+          .slice(0, 2)
+          .join('')
+          .toUpperCase()
+      : '?';
 
   return (
     <ScrollView
@@ -135,7 +136,7 @@ function UserProfile() {
             key={item.label}
             style={[prof.menuItem, idx === arr.length - 1 && { borderBottomWidth: 0 }]}
             activeOpacity={0.7}
-            onPress={item.route ? () => router.push(item.route) : undefined}
+            onPress={item.route ? () => navigation.navigate('Setting') : undefined}
           >
             <View style={prof.menuIconWrap}>
               <Ionicons name={item.icon} size={20} color={colors.primary} />
