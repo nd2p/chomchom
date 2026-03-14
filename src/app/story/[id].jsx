@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
   StatusBar,
   Alert,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import { getComicDetails } from '../../features/comics/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -28,8 +28,28 @@ export default function StoryDetail() {
   const [chapters, setChapters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showFullDescription, setShowFullDescription] = useState(false);
-  const lastChapter = chapters.find((chap) => chap._id === lastChapterId);
   const [isLiked, setIsLiked] = useState(false);
+  // useMemo ghi nhớ kết quả của lastChapter. Chạy lại khi chapters & lastChapterId change
+  const lastChapter = useMemo(() => {
+    if (!lastChapterId || chapters.length === 0) return null;
+    return chapters.find((chap) => chap._id === lastChapterId);
+  }, [lastChapterId, chapters]);
+
+  // Chạy mỗi khi màn hình đó hiển thị trước mắt người dùng.
+  useFocusEffect(
+    React.useCallback(() => {
+      const updateUI = async () => {
+        const key = `history_${comicId}`;
+        const saved = await AsyncStorage.getItem(key);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setLastChapterId(parsed.chapterId);
+        }
+      };
+
+      if (comicId) updateUI();
+    }, [comicId])
+  );
 
   useEffect(() => {
     const fetchComicDetails = async () => {
@@ -73,30 +93,6 @@ export default function StoryDetail() {
     }
   }, [comicId]);
 
-  const handleStartReading = async () => {
-    try {
-      const data = await AsyncStorage.getItem(`history_${comicId}`);
-
-      if (data) {
-        const history = JSON.parse(data);
-
-        navigation.navigate('ChapterDetail', {
-          chapterId: history.chapterId,
-          comicId,
-        });
-      } else {
-        if (chapters.length === 0) return;
-
-        navigation.navigate('ChapterDetail', {
-          chapterId: chapters[0]._id,
-          comicId,
-        });
-      }
-    } catch (error) {
-      console.log('Read history error:', error);
-    }
-  };
-
   const handleChapterPress = (chapterId) => {
     navigation.navigate('ChapterDetail', {
       chapterId,
@@ -105,7 +101,14 @@ export default function StoryDetail() {
   };
 
   const handleReadNow = () => {
-    handleStartReading();
+    const targetId = lastChapterId || chapters[0]?._id;
+
+    if (targetId) {
+      navigation.navigate('ChapterDetail', {
+        chapterId: targetId,
+        comicId: comicId,
+      });
+    }
   };
 
   const handleToggleFollow = async () => {
@@ -238,7 +241,11 @@ export default function StoryDetail() {
           <TouchableOpacity style={styles.readButton} onPress={handleReadNow} activeOpacity={0.8}>
             <Text style={styles.readButtonIcon}>▶</Text>
             <Text style={styles.readButtonText}>
-              {lastChapter ? `Chap: ${lastChapter.chapterNumber}` : 'Đọc ngay'}
+              {lastChapter
+                ? `Tiếp tục: C.${lastChapter.chapterNumber}`
+                : lastChapterId
+                  ? 'Đang tải...'
+                  : 'Đọc ngay'}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity

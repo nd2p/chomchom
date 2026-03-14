@@ -97,37 +97,24 @@ export default function ChapterDetail() {
   const saveReading = async () => {
     try {
       const key = `history_${comicId}`;
-      const existing = await AsyncStorage.getItem(key);
 
-      if (existing) {
-        const parsed = JSON.parse(existing);
-        if (parsed.chapterId === chapterId) return;
-      }
+      const historyData = {
+        chapterId,
+        updatedAt: new Date().getTime(),
+      };
 
-      await AsyncStorage.setItem(key, JSON.stringify({ chapterId }));
+      await AsyncStorage.setItem(key, JSON.stringify(historyData));
 
       const token = await AsyncStorage.getItem('userToken');
-
       if (token) {
         await updateReadingHistory(comicId, chapterId);
       } else {
-        console.log('User chưa đăng nhập, đã lưu lịch sử đọc offline thành công!');
+        console.log('Đã cập nhật lịch sử đọc offline!');
       }
     } catch (error) {
       console.log('Save history error:', error);
     }
   };
-
-  // SCROLL TO CURRENT CHAPTER
-  // const scrollToCurrentChapter = useCallback(() => {
-  //   if (!chapterListRef.current || currentChapterIndex < 0) return;
-
-  //   chapterListRef.current.scrollToIndex({
-  //     index: currentChapterIndex,
-  //     animated: false,
-  //     viewPosition: 0.5,
-  //   });
-  // }, [currentChapterIndex]);
 
   useEffect(() => {
     if (!chapterModal || !chapterListRef.current) return;
@@ -174,6 +161,11 @@ export default function ChapterDetail() {
   // Tap vẫn toggle thủ công (giữ lại tính năng cũ)
   const handleTap = () => {
     animateUI(!uiVisibleRef.current);
+  };
+
+  const handleBack = async () => {
+    await saveReading();
+    navigation.goBack();
   };
 
   const goPrev = () => {
@@ -237,7 +229,7 @@ export default function ChapterDetail() {
         ]}
       >
         <View style={styles.headerContent}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
+          <TouchableOpacity onPress={handleBack}>
             <Text style={styles.iconText}>❮</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Chương {chapter.chapterNumber}</Text>
