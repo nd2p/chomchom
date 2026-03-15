@@ -31,6 +31,11 @@ function authReducer(state, action) {
         isAuthenticated: true,
         isRestoring: false,
       };
+    case 'UPDATE_USER':
+      return {
+        ...state,
+        user: action.payload,
+      };
     case 'LOGOUT':
       return { ...initialState, isRestoring: false };
     default:
@@ -55,7 +60,7 @@ export function AuthProvider({ children }) {
     async function restoreSession() {
       try {
         const [token, userJson] = await Promise.all([
-          SecureStore.getItemAsync(AUTH_TOKEN_KEY),
+          AsyncStorage.getItem(AUTH_TOKEN_KEY),
           AsyncStorage.getItem(AUTH_USER_KEY),
         ]);
         if (token && userJson) {
@@ -72,7 +77,7 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     await Promise.all([
-      SecureStore.deleteItemAsync(AUTH_TOKEN_KEY),
+      AsyncStorage.removeItem(AUTH_TOKEN_KEY),
       AsyncStorage.removeItem(AUTH_USER_KEY),
     ]);
     dispatch({ type: 'LOGOUT' });
@@ -89,14 +94,30 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = async (user, token) => {
-    await Promise.all([
-      SecureStore.setItemAsync(AUTH_TOKEN_KEY, token),
-      AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(user)),
-    ]);
-    dispatch({ type: 'LOGIN', payload: { user, token } });
+    try {
+      await Promise.all([
+        AsyncStorage.setItem(AUTH_TOKEN_KEY, token),
+        AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(user)),
+      ]);
+      dispatch({ type: 'LOGIN', payload: { user, token } });
+    } catch {
+      console.error('Failed to save auth data');
+    }
+
+  };
+
+  const updateCurrentUser = async (nextUser) => {
+    try {
+      await AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(nextUser));
+      dispatch({ type: 'UPDATE_USER', payload: nextUser });
+    } catch {
+      console.error('Failed to update auth user');
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ ...state, login, logout }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ ...state, login, logout, updateCurrentUser }}>
+      {children}
+    </AuthContext.Provider>
   );
 }

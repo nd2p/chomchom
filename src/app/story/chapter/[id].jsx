@@ -456,7 +456,10 @@ export default function ChapterDetail() {
                       onPress={() => {
                         setChapterModal(false);
                         if (!isActive) {
-                          navigation.replace('ChapterDetail', { chapterId: item._id });
+                          navigation.replace('ChapterDetail', {
+                            chapterId: item._id,
+                            comicId: comicId,
+                          });
                         }
                       }}
                     >

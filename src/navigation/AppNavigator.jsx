@@ -11,6 +11,7 @@ import Profile from '../app/(tabs)/profile';
 import StoryDetail from '../app/story/[id]';
 import ChapterDetail from '../app/story/chapter/[id]';
 import SettingsScreen from '../app/settings';
+import EditProfileScreen from '../app/edit-profile';
 
 const Stack = createStackNavigator();
 
@@ -73,6 +74,7 @@ const AppNavigator = () => {
       <Stack.Screen name="StoryDetail" component={StoryDetail} />
       <Stack.Screen name="ChapterDetail" component={ChapterDetail} />
       <Stack.Screen name="Setting" component={SettingsScreen} />
+      <Stack.Screen name="EditProfile" component={EditProfileScreen} />
       <Stack.Screen name="Profile" component={Profile} />
     </Stack.Navigator>
   );

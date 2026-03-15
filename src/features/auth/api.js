@@ -59,4 +59,25 @@ export const authApi = {
   logout: async () => {
     // No server endpoint — token is cleared locally by the auth store.
   },
+
+  getUserById: async (userId) => {
+    const { data } = await axiosInstance.get(`/api/users/${userId}`, {
+      requiresAuth: true,
+    });
+    return data;
+  },
+
+  updateProfile: async (userId, payload) => {
+    const { data } = await axiosInstance.put(`/api/users/${userId}`, payload, {
+      requiresAuth: true,
+    });
+    return data;
+  },
+
+  changePassword: async (userId, payload) => {
+    const { data } = await axiosInstance.put(`/api/users/${userId}/password`, payload, {
+      requiresAuth: true,
+    });
+    return data;
+  },
 };

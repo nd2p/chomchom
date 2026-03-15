@@ -26,6 +26,7 @@ function makeStyles(colors) {
       flexDirection: 'row',
       alignItems: 'center',
       paddingRight: 10,
+      paddingBottom: 10,
       zIndex: 10,
       gap: 5,
     },

@@ -1,4 +1,4 @@
-export default {
+﻿export default {
   common: {
     loading: 'Loading...',
     error: 'Error',
@@ -116,6 +116,39 @@ export default {
       reading: 'Reading',
       bookmarks: 'Bookmarks',
       completed: 'Completed',
+    },
+    edit: {
+      title: 'Edit Profile',
+      profileSectionTitle: 'Personal Information',
+      usernameLabel: 'Username',
+      usernamePlaceholder: 'Enter username',
+      emailLabel: 'Email',
+      saveProfileButton: 'Save Profile',
+      passwordSectionTitle: 'Change Password',
+      passwordWarning:
+        'Warning: After changing your password, please sign in again on other devices for account security.',
+      currentPasswordLabel: 'Current Password',
+      currentPasswordPlaceholder: 'Enter current password',
+      newPasswordLabel: 'New Password',
+      newPasswordPlaceholder: 'Enter new password',
+      confirmPasswordLabel: 'Confirm New Password',
+      confirmPasswordPlaceholder: 'Re-enter new password',
+      changePasswordButton: 'Change Password',
+      alerts: {
+        notice: 'Notice',
+        error: 'Error',
+        success: 'Success',
+        usernameRequired: 'Username is required',
+        userNotFound: 'User information not found',
+        profileUpdated: 'Profile updated successfully',
+        profileUpdateFailed: 'Update failed',
+        passwordInfoRequired: 'Please fill in all password fields',
+        passwordTooShort: 'New password must be at least 6 characters',
+        passwordConfirmMismatch: 'Password confirmation does not match',
+        passwordUpdated: 'Password changed successfully',
+        passwordUpdateFailed: 'Password change failed',
+        passwordEndpointNotSupported: 'Backend does not support password endpoint {{endpoint}}',
+      },
     },
     menu: {
       editProfile: 'Edit Profile',
