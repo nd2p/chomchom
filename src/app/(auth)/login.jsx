@@ -15,6 +15,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../features/auth/hooks';
 import { authApi } from '../../features/auth/api';
@@ -199,6 +200,7 @@ WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen({ onSwitchMode }) {
   const { login } = useAuth();
+  const navigation = useNavigation();
   const { colors } = useSettings();
   const { t } = useTranslation();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -233,9 +235,33 @@ export default function LoginScreen({ onSwitchMode }) {
     try {
       setIsLoading(true);
       const res = await authApi.login({ email, password });
-      login(res.user, res.token);
+      await login(res.user, res.token);
+
+      if (!onSwitchMode) {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'MainTabs' }],
+        });
+      }
     } catch (error) {
-      Alert.alert(t('common.error'), error.response.data.message);
+      const status = error?.response?.status;
+      const apiMessage = error?.response?.data?.message;
+
+      if (status === 403) {
+        Alert.alert(t('common.error'), apiMessage || t('auth.errors.emailNotVerified'));
+        navigation.navigate('VerifyOtp', {
+          email: email.trim(),
+          purpose: 'register',
+        });
+        return;
+      }
+
+      if (status === 401) {
+        Alert.alert(t('common.error'), apiMessage || t('auth.errors.invalidCredentials'));
+        return;
+      }
+
+      Alert.alert(t('common.error'), apiMessage || t('auth.errors.default'));
     } finally {
       setIsLoading(false);
     }
@@ -249,7 +275,14 @@ export default function LoginScreen({ onSwitchMode }) {
       if (result?.type === 'success') {
         const { id_token } = result.params;
         const res = await authApi.loginWithGoogle(id_token);
-        login(res.user, res.token);
+        await login(res.user, res.token);
+
+        if (!onSwitchMode) {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'MainTabs' }],
+          });
+        }
       } else if (result?.type === 'cancel') {
         // User canceled, do nothing or show a subtle toast
       } else {
@@ -344,7 +377,13 @@ export default function LoginScreen({ onSwitchMode }) {
             </View>
 
             {/* Forgot password */}
-            <TouchableOpacity style={styles.forgotContainer} disabled={busy}>
+            <TouchableOpacity
+              style={styles.forgotContainer}
+              disabled={busy}
+              onPress={() => {
+                console.log('Navigate to Forgot Password');
+                navigation.navigate('ForgotPassword')}}
+            >
               <Text style={styles.forgotText}>{t('auth.login.forgotPassword')}</Text>
             </TouchableOpacity>
 
@@ -387,14 +426,21 @@ export default function LoginScreen({ onSwitchMode }) {
             </TouchableOpacity>
 
             {/* Register link */}
-            {onSwitchMode && (
-              <View style={styles.footer}>
-                <Text style={styles.footerText}>{t('auth.login.noAccount')} </Text>
-                <TouchableOpacity onPress={() => onSwitchMode('register')} disabled={busy}>
-                  <Text style={styles.footerLink}>{t('auth.login.registerLink')}</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>{t('auth.login.noAccount')} </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  if (onSwitchMode) {
+                    onSwitchMode('register');
+                  } else {
+                    navigation.navigate('Register');
+                  }
+                }}
+                disabled={busy}
+              >
+                <Text style={styles.footerLink}>{t('auth.login.registerLink')}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

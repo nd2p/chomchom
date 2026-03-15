@@ -1,7 +1,13 @@
 import { axiosInstance } from '../../services/api/axios';
 import { endpoints } from '../../services/api/endpoints';
 
-const delay = (ms) => new Promise((res) => setTimeout(res, ms));
+function extractToken(data) {
+  return data?.token ?? data?.accessToken ?? data?.resetToken;
+}
+
+function extractUser(data) {
+  return data?.user ?? data;
+}
 
 export const authApi = {
   /**
@@ -37,6 +43,37 @@ export const authApi = {
     return data;
   },
 
+  verifyOtp: async (payload) => {
+    const { data } = await axiosInstance.post(endpoints.auth.verify, {
+      email: payload.email,
+      code: payload.code,
+      purpose: payload.purpose,
+    });
+
+    return {
+      ...data,
+      token: extractToken(data),
+      user: extractUser(data),
+    };
+  },
+
+  forgotPassword: async (payload) => {
+    const { data } = await axiosInstance.post(endpoints.auth.forgotPassword, {
+      email: payload.email,
+    });
+    return data;
+  },
+
+  resetPassword: async (payload) => {
+    const { data } = await axiosInstance.post(endpoints.auth.resetPassword, {
+      email: payload.email,
+      newPassword: payload.newPassword,
+      token: payload.token,
+      code: payload.code,
+    });
+    return data;
+  },
+
   /**
    * Post Google ID Token to backend
    * POST /api/auth/google
@@ -47,13 +84,13 @@ export const authApi = {
     });
 
     const user = {
-      _id: data.user._id,
-      username: data.user.username,
-      email: data.user.email,
-      role: data.user.role,
+      _id: data?.user?._id,
+      username: data?.user?.username,
+      email: data?.user?.email,
+      role: data?.user?.role,
     };
 
-    return { user, token: data.accessToken };
+    return { user, token: data?.accessToken };
   },
 
   logout: async () => {
