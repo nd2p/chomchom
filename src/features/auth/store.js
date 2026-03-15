@@ -1,5 +1,6 @@
 import React, { createContext, useEffect, useRef, useReducer } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { setupInterceptors } from '../../services/api/interceptors';
 
 const AUTH_TOKEN_KEY = '@auth/token';
@@ -54,7 +55,7 @@ export function AuthProvider({ children }) {
     async function restoreSession() {
       try {
         const [token, userJson] = await Promise.all([
-          AsyncStorage.getItem(AUTH_TOKEN_KEY),
+          SecureStore.getItemAsync(AUTH_TOKEN_KEY),
           AsyncStorage.getItem(AUTH_USER_KEY),
         ]);
         if (token && userJson) {
@@ -71,7 +72,7 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     await Promise.all([
-      AsyncStorage.removeItem(AUTH_TOKEN_KEY),
+      SecureStore.deleteItemAsync(AUTH_TOKEN_KEY),
       AsyncStorage.removeItem(AUTH_USER_KEY),
     ]);
     dispatch({ type: 'LOGOUT' });
@@ -89,7 +90,7 @@ export function AuthProvider({ children }) {
 
   const login = async (user, token) => {
     await Promise.all([
-      AsyncStorage.setItem(AUTH_TOKEN_KEY, token),
+      SecureStore.setItemAsync(AUTH_TOKEN_KEY, token),
       AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(user)),
     ]);
     dispatch({ type: 'LOGIN', payload: { user, token } });

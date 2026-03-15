@@ -13,6 +13,7 @@ import FilterModal from '../../features/comics/components/FilterModal';
 import RecommendedSection from '../../features/comics/components/RecommendedSection';
 import RecentlyReadSection from '../../features/comics/components/RecentlyReadSection';
 import MainComicList from '../../features/comics/components/MainComicList';
+import { useDebounce } from '../../hooks/useDebounce';
 
 function makeStyles(colors) {
   return StyleSheet.create({
@@ -112,6 +113,12 @@ export default function Home() {
   const [hasMoreFilters, setHasMoreFilters] = useState(true);
   const [isLoadingMoreFilters, setIsLoadingMoreFilters] = useState(false);
 
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+
+  const isSearchActive = searchQuery.trim() !== '';
+
   const [showScrollTop, setShowScrollTop] = useState(false);
   const flatListRef = useRef(null);
 
@@ -206,6 +213,49 @@ export default function Home() {
     fetchPopular();
     fetchReadingHistory();
   }, [fetchRecommended, fetchPopular, fetchReadingHistory]);
+
+  useEffect(() => {
+    if (!debouncedSearchQuery.trim()) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const triggerSearch = async () => {
+      setIsSearching(true);
+      try {
+        const res = await getComics(
+          { search: debouncedSearchQuery, limit: 5 },
+          { signal: controller.signal }
+        );
+        const comics = res?.comics;
+        const normalized = Array.isArray(comics)
+          ? comics.map((comic) => ({
+              id: comic?._id,
+              title: comic?.title || naText,
+              author: comic?.author || naText,
+              cover: comic?.coverImage,
+              chapters: comic?.totalChapters,
+              views: comic?.views,
+            }))
+          : [];
+        setSearchResults(normalized);
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          console.log('Search failed', error);
+        }
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    triggerSearch();
+
+    return () => {
+      controller.abort();
+    };
+  }, [debouncedSearchQuery, naText]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
@@ -439,15 +489,15 @@ export default function Home() {
       />
 
       <MainComicList
-        comics={isFiltered ? filteredComics : popularComics}
-        isFiltered={isFiltered}
-        filterTitle={getFilterTitle()}
-        onClearFilters={handleClearFilters}
+        comics={isSearchActive ? searchResults : (isFiltered ? filteredComics : popularComics)}
+        isFiltered={isFiltered || isSearchActive}
+        filterTitle={isSearchActive ? t('home.searchResultsFor', { query: searchQuery }) : getFilterTitle()}
+        onClearFilters={isSearchActive ? () => setSearchQuery('') : handleClearFilters}
         onStoryPress={handleStoryPress}
-        ListHeaderComponent={<ListHeader />}
+        ListHeaderComponent={isSearchActive ? null : <ListHeader />}
         getComicKey={getComicKey}
-        onEndReached={loadMoreFilters}
-        isLoadingMore={isLoadingMoreFilters}
+        onEndReached={isSearchActive ? null : loadMoreFilters}
+        isLoadingMore={isSearchActive ? isSearching : isLoadingMoreFilters}
         onScroll={handleScroll}
         flatListRef={flatListRef}
       />

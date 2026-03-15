@@ -38,14 +38,22 @@ export const authApi = {
   },
 
   /**
-   * TODO: Integrate expo-auth-session + Google OAuth
+   * Post Google ID Token to backend
+   * POST /api/auth/google
    */
-  loginWithGoogle: async () => {
-    await delay(1500);
-    return {
-      user: { _id: '3', username: 'Google User', email: 'user@gmail.com', provider: 'google' },
-      token: 'mock-token-google',
+  loginWithGoogle: async (idToken) => {
+    const { data } = await axiosInstance.post(endpoints.auth.google, {
+      idToken,
+    });
+
+    const user = {
+      _id: data.user._id,
+      username: data.user.username,
+      email: data.user.email,
+      role: data.user.role,
     };
+
+    return { user, token: data.accessToken };
   },
 
   logout: async () => {

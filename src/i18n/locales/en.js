@@ -1,4 +1,4 @@
-﻿export default {
+export default {
   common: {
     loading: 'Loading...',
     error: 'Error',
@@ -62,6 +62,7 @@
     loginRequiredSuffix: ' to have this feature',
     noHistory: 'No reading history yet',
     goBack: 'Go Back',
+    searchResultsFor: 'Search results for "{{query}}"',
     filter: {
       base: 'All comics',
       status: {

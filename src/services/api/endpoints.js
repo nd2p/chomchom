@@ -3,6 +3,7 @@ export const endpoints = {
   auth: {
     register: '/api/auth/register',
     login: '/api/auth/login',
+    google: '/api/auth/google',
   },
   readingHistory: '/api/reading-history',
   genres: '/api/genres',

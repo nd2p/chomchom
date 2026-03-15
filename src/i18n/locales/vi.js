@@ -1,4 +1,4 @@
-﻿export default {
+export default {
   common: {
     loading: 'Đang tải...',
     error: 'Lỗi',
@@ -62,6 +62,7 @@
     loginRequiredSuffix: ' để xem tính năng này',
     noHistory: 'Chưa có lịch sử đọc',
     goBack: 'Quay lại',
+    searchResultsFor: 'Kết quả tìm kiếm cho "{{query}}"',
     filter: {
       base: 'Tất cả truyện',
       status: {
