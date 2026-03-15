@@ -68,6 +68,15 @@ function makeStyles(colors) {
       flex: 1,
       textAlign: 'center',
     },
+    headerButton: {
+      padding: 12,
+    },
+    headerButtonText: {
+      fontSize: 32,
+      fontWeight: '300',
+      color: colors.text,
+      lineHeight: 32,
+    },
     iconText: { color: colors.primary, fontSize: 22, fontWeight: 'bold' },
     bottomOverlay: {
       position: 'absolute',
@@ -249,11 +258,6 @@ export default function ChapterDetail() {
     animateUI(!uiVisibleRef.current);
   };
 
-  const handleBack = async () => {
-    await saveReading();
-    navigation.goBack();
-  };
-
   const goPrev = () => {
     if (currentIndex > 0) {
       navigation.replace('ChapterDetail', {
@@ -325,8 +329,8 @@ export default function ChapterDetail() {
         ]}
       >
         <View style={styles.headerContent}>
-          <TouchableOpacity onPress={handleBack}>
-            <Text style={styles.iconText}>❮</Text>
+          <TouchableOpacity style={styles.headerButton} onPress={() => navigation.goBack()}>
+            <Text style={styles.headerButtonText}>‹</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Chương {chapter.chapterNumber}</Text>
           <TouchableOpacity onPress={() => setChapterModal(true)}>
