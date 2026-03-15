@@ -31,6 +31,25 @@ export async function createReview(comicId, content, rating) {
     comic: comicId,
     content,
     rating,
+  }, {
+    requiresAuth: true,
+  });
+  return response.data;
+}
+
+export async function updateReview(reviewId, content, rating) {
+  const response = await axiosInstance.put(`/api/comments/${reviewId}`, {
+    content,
+    rating,
+  }, {
+    requiresAuth: true,
+  });
+  return response.data;
+}
+
+export async function deleteReview(reviewId) {
+  const response = await axiosInstance.delete(`/api/comments/${reviewId}`, {
+    requiresAuth: true,
   });
   return response.data;
 }
