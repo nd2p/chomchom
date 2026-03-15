@@ -17,7 +17,7 @@ import { authApi } from '../../features/auth/api';
 import { useSettings } from '../../features/settings/hooks';
 import RegisterScreen from '../(auth)/register';
 import LoginScreen from '../(auth)/login';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 
 // ---------- Unauthenticated view ----------
 function GuestView() {
@@ -79,11 +79,11 @@ function UserProfile() {
   const initials =
     user?.username || user?.name
       ? (user.username || user.name)
-          .split(' ')
-          .map((w) => w[0])
-          .slice(0, 2)
-          .join('')
-          .toUpperCase()
+        .split(' ')
+        .map((w) => w[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase()
       : '?';
 
   return (
@@ -311,6 +311,14 @@ function makeStyles(colors) {
 export default function ProfileTab() {
   const { isAuthenticated } = useAuth();
   const { colors } = useSettings();
+  const navigation = useNavigation();
+  const route = useRoute();
+
+  React.useEffect(() => {
+    if (isAuthenticated && route.params?.goBack) {
+      navigation.goBack();
+    }
+  }, [isAuthenticated]);
 
   return (
     <SafeAreaView style={[{ flex: 1, backgroundColor: colors.background }]} edges={[]}>

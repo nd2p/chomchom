@@ -6,4 +6,5 @@ export const endpoints = {
   },
   readingHistory: '/api/reading-history',
   genres: '/api/genres',
+  readerChatbot: (comicId) => `/api/comics/${comicId}/reader-chatbot`,
 };
