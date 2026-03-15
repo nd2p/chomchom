@@ -605,7 +605,7 @@ export default function StoryDetail() {
       const comicData = comicRes?.comic || comicRes;
       setComic(comicData);
       setChapters(comicData?.chapters || []);
-      setReviews(reviewsRes?.comments || []);
+      setReviews(reviewsRes || []);
       setIsLiked((prev) =>
         typeof comicRes?.isLiked === 'boolean' ? comicRes.isLiked : prev
       );
