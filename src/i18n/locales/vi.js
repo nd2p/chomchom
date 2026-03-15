@@ -142,6 +142,18 @@
       prev: '❮ Trước',
       next: 'Sau ❯',
     },
+    chatbot: {
+      title: 'AI Trợ Lý Đọc Truyện',
+      hint: 'Hỏi AI về bộ truyện này:',
+      placeholder: 'Nhập câu hỏi...',
+      thinking: 'Đang suy nghĩ...',
+      errorMessage: 'Có lỗi xảy ra. Vui lòng thử lại.',
+      samples: [
+        'Chương trước có chuyện gì xảy ra?',
+        'Tóm tắt từ đầu đến chương hiện tại',
+        'Tóm tắt nội dung bộ manga này',
+      ],
+    },
     notFound: 'Không tìm thấy truyện',
     readContinue: 'Đọc tiếp',
     status: {

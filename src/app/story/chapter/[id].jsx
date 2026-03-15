@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,7 @@ import { getChaptersByComic, getChapterById } from '../../../features/chapters/a
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { updateReadingHistory } from '../../../features/bookmarks/api';
 import { useAuth } from '../../../features/auth/hooks';
+import { ReaderChatbot } from '../../../features/chapters/reader/ReaderChatbot';
 
 const { width } = Dimensions.get('window');
 const ITEM_HEIGHT = 64;
@@ -67,6 +68,15 @@ function makeStyles(colors) {
       fontWeight: '700',
       flex: 1,
       textAlign: 'center',
+    },
+    headerButton: {
+      padding: 12,
+    },
+    headerButtonText: {
+      fontSize: 32,
+      fontWeight: '300',
+      color: colors.text,
+      lineHeight: 32,
     },
     iconText: { color: colors.primary, fontSize: 22, fontWeight: 'bold' },
     bottomOverlay: {
@@ -129,6 +139,24 @@ function makeStyles(colors) {
     chapterItemText: { fontSize: 15, color: colors.textSecondary },
     chapterItemTextActive: { color: colors.primary, fontWeight: 'bold' },
     activeIndicator: { color: colors.primary, fontSize: 20 },
+    chatbotFab: {
+      position: 'absolute',
+      bottom: 90,
+      right: 20,
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 20,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+      elevation: 6,
+    },
+    chatbotFabText: { fontSize: 22 },
   });
 }
 
@@ -149,6 +177,7 @@ export default function ChapterDetail() {
   const [chapterModal, setChapterModal] = useState(false);
   const [sortOrder, setSortOrder] = useState('asc');
   const [imageLoading, setImageLoading] = useState({});
+  const [chatbotVisible, setChatbotVisible] = useState(false);
 
   const chapterListRef = useRef(null);
   const uiAnim = useRef(new Animated.Value(1)).current;
@@ -249,11 +278,6 @@ export default function ChapterDetail() {
     animateUI(!uiVisibleRef.current);
   };
 
-  const handleBack = async () => {
-    await saveReading();
-    navigation.goBack();
-  };
-
   const goPrev = () => {
     if (currentIndex > 0) {
       navigation.replace('ChapterDetail', {
@@ -325,8 +349,8 @@ export default function ChapterDetail() {
         ]}
       >
         <View style={styles.headerContent}>
-          <TouchableOpacity onPress={handleBack}>
-            <Text style={styles.iconText}>❮</Text>
+          <TouchableOpacity style={styles.headerButton} onPress={() => navigation.goBack()}>
+            <Text style={styles.headerButtonText}>‹</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Chương {chapter.chapterNumber}</Text>
           <TouchableOpacity onPress={() => setChapterModal(true)}>
@@ -370,6 +394,19 @@ export default function ChapterDetail() {
           </TouchableOpacity>
         </View>
       </Animated.View>
+
+      {/* CHATBOT FAB */}
+      <TouchableOpacity style={styles.chatbotFab} onPress={() => setChatbotVisible(true)}>
+        <Text style={styles.chatbotFabText}>🤖</Text>
+      </TouchableOpacity>
+
+      {/* CHATBOT MODAL */}
+      <ReaderChatbot
+        visible={chatbotVisible}
+        onClose={() => setChatbotVisible(false)}
+        comicId={comicId}
+        currentChapterNumber={chapter?.chapterNumber}
+      />
 
       {/* CHAPTER MODAL */}
       <Modal visible={chapterModal} transparent animationType="fade">

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -571,11 +571,12 @@ export default function StoryDetail() {
     return date.toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
-  useEffect(() => {
+  const fetchComicDetails = useCallback(async () => {
     if (!comicId) {
       setLoading(false);
       return;
     }
+
     const fetchComicDetails = async () => {
       try {
         const [comicRes, reviewsRes] = await Promise.all([
@@ -596,7 +597,35 @@ export default function StoryDetail() {
       }
     };
     fetchComicDetails();
+    try {
+      const [comicRes, reviewsRes] = await Promise.all([
+        getComicDetails(comicId),
+        getComicReviews(comicId),
+      ]);
+      const comicData = comicRes?.comic || comicRes;
+      setComic(comicData);
+      setChapters(comicData?.chapters || []);
+      setReviews(reviewsRes?.comments || []);
+      setIsLiked((prev) =>
+        typeof comicRes?.isLiked === 'boolean' ? comicRes.isLiked : prev
+      );
+    } catch (error) {
+      console.log('Failed to fetch comic details', error);
+    } finally {
+      setLoading(false);
+    }
   }, [comicId]);
+
+  useEffect(() => {
+    fetchComicDetails();
+  }, [fetchComicDetails]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      fetchComicDetails();
+    });
+    return unsubscribe;
+  }, [navigation, fetchComicDetails]);
 
   useEffect(() => {
     if (!isAuthenticated || !comicId) return;
@@ -656,7 +685,7 @@ export default function StoryDetail() {
   };
 
   const handleReadNow = () => {
-    const targetId = lastChapterId || chapters[0]?._id;
+    const targetId = (isAuthenticated && lastChapterId) ? lastChapterId : chapters[0]?._id;
     if (targetId) {
       navigation.navigate('ChapterDetail', { chapterId: targetId, comicId });
     }
@@ -729,11 +758,13 @@ export default function StoryDetail() {
     );
   };
 
-  const readButtonLabel = lastChapter
-    ? t('story.detail.readContinue', { chapter: lastChapter.chapterNumber })
-    : lastChapterId
-      ? t('common.loading')
-      : t('story.detail.readNow');
+  const readButtonLabel = isAuthenticated
+    ? lastChapter
+      ? t('story.detail.readContinue', { chapter: lastChapter.chapterNumber })
+      : lastChapterId
+        ? t('common.loading')
+        : t('story.detail.readNow')
+    : t('story.detail.readNow');
 
   const renderChapter = ({ item }) => {
     return (

@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import SearchBar from '../../components/ui/SearchBar';
-import { getComics, getReadingHistory, getGenres } from '../../features/comics/api';
+import { getComics, getGenres } from '../../features/comics/api';
+import { getReadingHistory } from '../../features/bookmarks/api';
 import { apiBaseURL } from '../../services/api/axios';
 import { useAuth } from '../../features/auth/hooks';
 import { useSettings } from '../../features/settings/hooks';
@@ -120,95 +121,100 @@ export default function Home() {
 
   const naText = t('common.na');
 
-  useEffect(() => {
-    const fetchComics = async () => {
-      try {
-        const res = await getComics({ sort: 'viewsDesc', page: 1 });
-        const comics = res?.comics;
-        const normalizedComics = Array.isArray(comics)
-          ? comics.map((comic) => ({
-            id: comic?._id,
-            title: comic?.title || naText,
-            author: comic?.author || naText,
-            cover: comic?.coverImage,
-            chapters: comic?.totalChapters,
-            views: comic?.views,
-          }))
-          : [];
+  const fetchRecommended = useCallback(async () => {
+    try {
+      const res = await getComics({ sort: 'viewsDesc', page: 1 });
+      const comics = res?.comics;
+      const normalizedComics = Array.isArray(comics)
+        ? comics.map((comic) => ({
+          id: comic?._id,
+          title: comic?.title || naText,
+          author: comic?.author || naText,
+          cover: comic?.coverImage,
+          chapters: comic?.totalChapters,
+          views: comic?.views,
+        }))
+        : [];
 
-        setRecommendedComics(normalizedComics);
-      } catch (error) {
-        console.log('Failed to fetch recommended comics', {
-          baseURL: apiBaseURL,
-          error,
-        });
-      }
-    };
+      setRecommendedComics(normalizedComics);
+    } catch (error) {
+      console.log('Failed to fetch recommended comics', {
+        baseURL: apiBaseURL,
+        error,
+      });
+    }
+  }, [naText]);
 
-    fetchComics();
-  }, []);
+  const fetchPopular = useCallback(async () => {
+    try {
+      const res = await getComics({ sort: 'likesDesc', page: 1 });
+      const comics = res?.comics;
+      const normalized = Array.isArray(comics)
+        ? comics.map((comic) => ({
+          id: comic?._id,
+          title: comic?.title || naText,
+          author: comic?.author || naText,
+          cover: comic?.coverImage,
+          chapters: comic?.totalChapters,
+          views: comic?.views,
+        }))
+        : [];
+      setPopularComics(normalized);
+    } catch (error) {
+      console.log('Failed to fetch popular comics', error);
+    }
+  }, [naText]);
 
-  useEffect(() => {
-    const fetchPopular = async () => {
-      try {
-        const res = await getComics({ sort: 'likesDesc', page: 1 });
-        const comics = res?.comics;
-        const normalized = Array.isArray(comics)
-          ? comics.map((comic) => ({
-            id: comic?._id,
-            title: comic?.title || naText,
-            author: comic?.author || naText,
-            cover: comic?.coverImage,
-            chapters: comic?.totalChapters,
-            views: comic?.views,
-          }))
-          : [];
-        setPopularComics(normalized);
-      } catch (error) {
-        console.log('Failed to fetch popular comics', error);
-      }
-    };
-
-    fetchPopular();
-  }, []);
-
-  useEffect(() => {
+  const fetchReadingHistory = useCallback(async () => {
     if (!isAuthenticated) {
       setRecentlyRead([]);
       return;
     }
 
-    const fetchReadingHistory = async () => {
-      try {
-        const res = await getReadingHistory(1);
-        const histories = Array.isArray(res)
-          ? res
-          : Array.isArray(res?.histories)
-            ? res.histories
-            : Array.isArray(res?.data)
-              ? res.data
-              : Array.isArray(res?.data?.histories)
-                ? res.data.histories
-                : [];
-        const normalizedHistories = Array.isArray(histories)
-          ? histories.map((history) => ({
-            id: history?._id ?? history?.comic?._id ?? history?.id,
-            title: history?.comic?.title ?? history?.title ?? naText,
-            author: history?.comic?.author ?? history?.author ?? naText,
-            cover: history?.comic?.coverImage ?? history?.coverImage ?? history?.cover,
-            chapters: history?.comic?.totalChapters ?? history?.totalChapters,
-            views: history?.comic?.views ?? history?.views,
+    try {
+      const res = await getReadingHistory();
+      const histories = Array.isArray(res)
+        ? res
+        : Array.isArray(res?.histories)
+          ? res.histories
+          : Array.isArray(res?.data)
+            ? res.data
+            : Array.isArray(res?.data?.histories)
+              ? res.data.histories
+              : [];
+      const normalizedHistories = Array.isArray(histories)
+        ? histories
+          .filter((history) => history?.comic?._id || history?.comic?.id)
+          .map((history) => ({
+            id: history?.comic?._id ?? history?.comic?.id,
+            title: history?.comic?.title ?? naText,
+            author: history?.comic?.author ?? naText,
+            cover: history?.comic?.coverImage ?? history?.comic?.cover,
+            chapters: history?.comic?.totalChapters,
+            views: history?.comic?.views,
           }))
-          : [];
+        : [];
 
-        setRecentlyRead(normalizedHistories);
-      } catch (error) {
-        console.log('Failed to fetch reading history', error);
-      }
-    };
+      setRecentlyRead(normalizedHistories);
+    } catch (error) {
+      console.log('Failed to fetch reading history', error);
+    }
+  }, [isAuthenticated, naText]);
 
+  useEffect(() => {
+    fetchRecommended();
+    fetchPopular();
     fetchReadingHistory();
-  }, [isAuthenticated]);
+  }, [fetchRecommended, fetchPopular, fetchReadingHistory]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      fetchRecommended();
+      fetchPopular();
+      fetchReadingHistory();
+    });
+    return unsubscribe;
+  }, [navigation, fetchRecommended, fetchPopular, fetchReadingHistory]);
 
   const handleApplyFilters = async () => {
     setShowGenreModal(false);
@@ -230,13 +236,13 @@ export default function Home() {
       const comics = res?.comics;
       const normalized = Array.isArray(comics)
         ? comics.map((comic) => ({
-          id: comic?._id,
-          title: comic?.title || naText,
-          author: comic?.author || naText,
-          cover: comic?.coverImage,
-          chapters: comic?.totalChapters,
-          views: comic?.views,
-        }))
+            id: comic?._id,
+            title: comic?.title || naText,
+            author: comic?.author || naText,
+            cover: comic?.coverImage,
+            chapters: comic?.totalChapters,
+            views: comic?.views,
+          }))
         : [];
       setFilteredComics(normalized);
       setIsFiltered(true);
@@ -281,13 +287,13 @@ export default function Home() {
       const comics = res?.comics;
       const normalized = Array.isArray(comics)
         ? comics.map((comic) => ({
-          id: comic?._id,
-          title: comic?.title || naText,
-          author: comic?.author || naText,
-          cover: comic?.coverImage,
-          chapters: comic?.totalChapters,
-          views: comic?.views,
-        }))
+            id: comic?._id,
+            title: comic?.title || naText,
+            author: comic?.author || naText,
+            cover: comic?.coverImage,
+            chapters: comic?.totalChapters,
+            views: comic?.views,
+          }))
         : [];
 
       if (normalized.length > 0) {

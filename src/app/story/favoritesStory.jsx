@@ -121,6 +121,8 @@ export default function FavoriteReading() {
               cover={comic.coverImage || comic.cover}
               views={comic.views}
               chapters={comic.totalChapters}
+              containerStyle={{ width: '100%' }}
+              imageStyle={{ width: '100%' }}
               variant="vertical"
               onPress={() => navigation.navigate('StoryDetail', { id: comic._id })}
             />
