@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -569,32 +569,40 @@ export default function StoryDetail() {
     return date.toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
-  useEffect(() => {
+  const fetchComicDetails = useCallback(async () => {
     if (!comicId) {
       setLoading(false);
       return;
     }
-    const fetchComicDetails = async () => {
-      try {
-        const [comicRes, reviewsRes] = await Promise.all([
-          getComicDetails(comicId),
-          getComicReviews(comicId),
-        ]);
-        const comicData = comicRes?.comic || comicRes;
-        setComic(comicData);
-        setChapters(comicData?.chapters || []);
-        setReviews(reviewsRes?.comments || []);
-        setIsLiked((prev) =>
-          typeof comicRes?.isLiked === 'boolean' ? comicRes.isLiked : prev
-        );
-      } catch (error) {
-        console.log('Failed to fetch comic details', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchComicDetails();
+    try {
+      const [comicRes, reviewsRes] = await Promise.all([
+        getComicDetails(comicId),
+        getComicReviews(comicId),
+      ]);
+      const comicData = comicRes?.comic || comicRes;
+      setComic(comicData);
+      setChapters(comicData?.chapters || []);
+      setReviews(reviewsRes?.comments || []);
+      setIsLiked((prev) =>
+        typeof comicRes?.isLiked === 'boolean' ? comicRes.isLiked : prev
+      );
+    } catch (error) {
+      console.log('Failed to fetch comic details', error);
+    } finally {
+      setLoading(false);
+    }
   }, [comicId]);
+
+  useEffect(() => {
+    fetchComicDetails();
+  }, [fetchComicDetails]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      fetchComicDetails();
+    });
+    return unsubscribe;
+  }, [navigation, fetchComicDetails]);
 
   useEffect(() => {
     if (!isAuthenticated || !comicId) return;
