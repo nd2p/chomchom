@@ -662,7 +662,7 @@ export default function StoryDetail() {
   };
 
   const handleReadNow = () => {
-    const targetId = lastChapterId || chapters[0]?._id;
+    const targetId = (isAuthenticated && lastChapterId) ? lastChapterId : chapters[0]?._id;
     if (targetId) {
       navigation.navigate('ChapterDetail', { chapterId: targetId, comicId });
     }
@@ -697,11 +697,13 @@ export default function StoryDetail() {
     }
   };
 
-  const readButtonLabel = lastChapter
-    ? t('story.detail.readContinue', { chapter: lastChapter.chapterNumber })
-    : lastChapterId
-      ? t('common.loading')
-      : t('story.detail.readNow');
+  const readButtonLabel = isAuthenticated
+    ? lastChapter
+      ? t('story.detail.readContinue', { chapter: lastChapter.chapterNumber })
+      : lastChapterId
+        ? t('common.loading')
+        : t('story.detail.readNow')
+    : t('story.detail.readNow');
 
   const renderChapter = ({ item }) => {
     return (
