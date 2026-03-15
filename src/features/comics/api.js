@@ -12,6 +12,18 @@ export async function getComics(params = {}, config = {}) {
   return response.data;
 }
 
+export async function getRecommendedComicsByHistory(comicIds = []) {
+  const response = await axiosInstance.post(
+    endpoints.comicsRecommend,
+    { comicIds },
+    {
+      requiresAuth: true,
+    }
+  );
+
+  return response.data;
+}
+
 
 export async function getReadingHistory(page = 1) {
   const response = await axiosInstance.get(endpoints.readingHistory, {

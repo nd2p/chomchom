@@ -1,5 +1,6 @@
 export const endpoints = {
   comics: '/api/comics',
+  comicsRecommend: '/api/comics/recommend',
   auth: {
     register: '/api/auth/register',
     login: '/api/auth/login',

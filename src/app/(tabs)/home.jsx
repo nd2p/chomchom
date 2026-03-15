@@ -4,7 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import SearchBar from '../../components/ui/SearchBar';
-import { getComics, getGenres } from '../../features/comics/api';
+import { getComics, getGenres, getRecommendedComicsByHistory } from '../../features/comics/api';
 import { getReadingHistory } from '../../features/bookmarks/api';
 import { apiBaseURL } from '../../services/api/axios';
 import { useAuth } from '../../features/auth/hooks';
@@ -129,29 +129,87 @@ export default function Home() {
 
   const naText = t('common.na');
 
+  const normalizeComics = useCallback(
+    (comics) =>
+      Array.isArray(comics)
+        ? comics.map((comic) => ({
+            id: comic?._id ?? comic?.id,
+            title: comic?.title || naText,
+            author: comic?.author || naText,
+            cover: comic?.coverImage ?? comic?.cover,
+            chapters: comic?.totalChapters,
+            views: comic?.views,
+          }))
+        : [],
+    [naText]
+  );
+
+  const fetchDefaultRecommended = useCallback(async () => {
+    const res = await getComics({ sort: 'viewsDesc', page: 1 });
+    return normalizeComics(res?.comics);
+  }, [normalizeComics]);
+
   const fetchRecommended = useCallback(async () => {
     try {
-      const res = await getComics({ sort: 'viewsDesc', page: 1 });
-      const comics = res?.comics;
-      const normalizedComics = Array.isArray(comics)
-        ? comics.map((comic) => ({
-          id: comic?._id,
-          title: comic?.title || naText,
-          author: comic?.author || naText,
-          cover: comic?.coverImage,
-          chapters: comic?.totalChapters,
-          views: comic?.views,
-        }))
-        : [];
+      if (!isAuthenticated) {
+        const fallback = await fetchDefaultRecommended();
+        setRecommendedComics(fallback);
+        return;
+      }
 
-      setRecommendedComics(normalizedComics);
+      const historyRes = await getReadingHistory();
+      const histories = Array.isArray(historyRes)
+        ? historyRes
+        : Array.isArray(historyRes?.histories)
+          ? historyRes.histories
+          : Array.isArray(historyRes?.data)
+            ? historyRes.data
+            : Array.isArray(historyRes?.data?.histories)
+              ? historyRes.data.histories
+              : [];
+
+      const comicIds = Array.from(
+        new Set(
+          histories
+            .map((history) => history?.comic?._id ?? history?.comic?.id ?? history?.comicId)
+            .filter(Boolean)
+            .map(String)
+        )
+      ).slice(0, 10);
+
+      if (comicIds.length === 0) {
+        const fallback = await fetchDefaultRecommended();
+        setRecommendedComics(fallback);
+        return;
+      }
+
+      try {
+        const recommendRes = await getRecommendedComicsByHistory(comicIds);
+        
+        const recommended = normalizeComics(recommendRes?.recommendations);
+        setRecommendedComics(recommended);
+      } catch (recommendError) {
+        const status = recommendError?.response?.status;
+        if (status === 401 || status === 403) {
+          const fallback = await fetchDefaultRecommended();
+          setRecommendedComics(fallback);
+          return;
+        }
+        throw recommendError;
+      }
     } catch (error) {
       console.log('Failed to fetch recommended comics', {
         baseURL: apiBaseURL,
         error,
       });
+      try {
+        const fallback = await fetchDefaultRecommended();
+        setRecommendedComics(fallback);
+      } catch {
+        setRecommendedComics([]);
+      }
     }
-  }, [naText]);
+  }, [isAuthenticated, fetchDefaultRecommended, normalizeComics]);
 
   const fetchPopular = useCallback(async () => {
     try {
