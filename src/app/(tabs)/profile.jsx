@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,10 +14,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../features/auth/hooks';
 import { authApi } from '../../features/auth/api';
+import { getReadingHistory, getLikedComics } from '../../features/bookmarks/api';
 import { useSettings } from '../../features/settings/hooks';
 import RegisterScreen from '../(auth)/register';
 import LoginScreen from '../(auth)/login';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 
 // ---------- Unauthenticated view ----------
 function GuestView() {
@@ -45,14 +46,58 @@ function UserProfile() {
   const { t } = useTranslation();
   const { top: topInset } = useSafeAreaInsets();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [readingCount, setReadingCount] = useState(0);
+  const [likedCount, setLikedCount] = useState(0);
   const navigation = useNavigation();
   const prof = useMemo(() => makeStyles(colors), [colors]);
 
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+
+      const loadStats = async () => {
+        try {
+          const [historyRes, likedRes] = await Promise.all([getReadingHistory(), getLikedComics()]);
+
+          const historyList = Array.isArray(historyRes)
+            ? historyRes
+            : Array.isArray(historyRes?.data)
+              ? historyRes.data
+              : [];
+
+          const likedList = Array.isArray(likedRes)
+            ? likedRes
+            : Array.isArray(likedRes?.comics)
+              ? likedRes.comics
+              : Array.isArray(likedRes?.data)
+                ? likedRes.data
+                : Array.isArray(likedRes?.data?.comics)
+                  ? likedRes.data.comics
+                  : [];
+
+          if (!cancelled) {
+            setReadingCount(historyList.length);
+            setLikedCount(likedList.length);
+          }
+        } catch (error) {
+          if (!cancelled) {
+            setReadingCount(0);
+            setLikedCount(0);
+          }
+        }
+      };
+
+      loadStats();
+
+      return () => {
+        cancelled = true;
+      };
+    }, [])
+  );
+
   const menuItems = [
-    { icon: 'person-outline', label: t('profile.menu.editProfile') },
-    { icon: 'notifications-outline', label: t('profile.menu.notifications') },
-    { icon: 'settings-outline', label: t('profile.menu.settings'), route: '/settings' },
-    { icon: 'help-circle-outline', label: t('profile.menu.helpFeedback') },
+    { icon: 'person-outline', label: t('profile.menu.editProfile'), route: 'EditProfile' },
+    { icon: 'settings-outline', label: t('profile.menu.settings'), route: 'Setting' },
   ];
 
   async function handleLogout() {
@@ -112,8 +157,8 @@ function UserProfile() {
       {/* Stats */}
       <View style={prof.statsRow}>
         {[
-          { label: t('profile.stats.reading'), value: '0' },
-          { label: t('profile.stats.completed'), value: '0' },
+          { label: t('profile.stats.reading'), value: String(readingCount) },
+          { label: t('profile.stats.bookmarks'), value: String(likedCount) },
         ].map((s, i, arr) => (
           <React.Fragment key={s.label}>
             <View style={prof.statItem}>
@@ -132,7 +177,7 @@ function UserProfile() {
             key={item.label}
             style={[prof.menuItem, idx === arr.length - 1 && { borderBottomWidth: 0 }]}
             activeOpacity={0.7}
-            onPress={item.route ? () => navigation.navigate('Setting') : undefined}
+            onPress={item.route ? () => navigation.navigate(item.route) : undefined}
           >
             <View style={prof.menuIconWrap}>
               <Ionicons name={item.icon} size={20} color={colors.primary} />

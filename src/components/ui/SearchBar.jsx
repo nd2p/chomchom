@@ -20,7 +20,8 @@ const SearchBar = ({ placeholder = 'Tìm kiếm truyện...', onChangeText, valu
 
 const styles = StyleSheet.create({
   container: {
-    paddingLeft: 10,
+    marginLeft: 10,
+    borderRadius: 8,
   },
   searchInput: {
     borderRadius: 8,

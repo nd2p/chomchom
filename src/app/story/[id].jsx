@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,14 +11,14 @@ import {
   Dimensions,
   Alert,
   StatusBar,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import { useAuth } from '../../features/auth/hooks';
 import { getReadingHistory, likeComic, getLikedComics } from '../../features/bookmarks/api';
 import { getComicDetails, getComicReviews, createReview, updateReview, deleteReview } from '../../services/api/comics';
-import { useFocusEffect } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
 import { useSettings } from '../../features/settings/hooks';
 
@@ -46,14 +46,14 @@ function makeStyles(colors) {
       alignItems: 'center',
       justifyContent: 'space-between',
       paddingHorizontal: 8,
-      paddingVertical: 8,
+      paddingVertical: 2,
       backgroundColor: colors.background,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
       zIndex: 10,
     },
     headerButton: {
-      padding: 12,
+      padding: 10,
     },
     headerButtonText: {
       fontSize: 32,
@@ -267,7 +267,25 @@ function makeStyles(colors) {
     chaptersHeader: {
       flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'space-between',
       marginBottom: 12,
+    },
+    chaptersHeaderLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    sortButton: {
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.card,
+    },
+    sortButtonText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text,
     },
     chapterCountBadge: {
       backgroundColor: colors.secondary,
@@ -537,25 +555,57 @@ export default function StoryDetail() {
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+  const [chapterSortOrder, setChapterSortOrder] = useState('desc');
   const [reviews, setReviews] = useState([]);
   const [reviewText, setReviewText] = useState('');
   const [reviewRating, setReviewRating] = useState(0);
   const [editingReviewId, setEditingReviewId] = useState(null);
+  const contentScrollRef = useRef(null);
 
   const lastChapter = useMemo(() => {
     if (!lastChapterId || chapters.length === 0) return null;
     return chapters.find((chap) => chap._id === lastChapterId);
   }, [lastChapterId, chapters]);
 
-  // Helper to normalize status from API
-  useFocusEffect(
-    React.useCallback(() => {
-      if (!comicId) return;
-      AsyncStorage.getItem(`history_${comicId}`).then((saved) => {
-        if (saved) setLastChapterId(JSON.parse(saved).chapterId);
-      });
-    }, [comicId])
-  );
+  const sortedChapters = useMemo(() => {
+    const list = [...chapters];
+    list.sort((a, b) => {
+      const aNumber = Number(a?.chapterNumber) || 0;
+      const bNumber = Number(b?.chapterNumber) || 0;
+      return chapterSortOrder === 'desc' ? bNumber - aNumber : aNumber - bNumber;
+    });
+    return list;
+  }, [chapters, chapterSortOrder]);
+
+  // Keep the last read chapter in sync on mount and whenever this screen regains focus.
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadHistoryOnFocus = async () => {
+      if (!isAuthenticated || !comicId) {
+        if (!cancelled) setLastChapterId(null);
+        return;
+      }
+
+      try {
+        const historyList = await getReadingHistory();
+        const history = historyList.find((item) => item?.comic?._id === comicId);
+        if (!cancelled) {
+          setLastChapterId(history?.chapter?._id || null);
+        }
+      } catch (error) {
+        console.log('Load history on focus error:', error);
+      }
+    };
+
+    loadHistoryOnFocus();
+    const unsubscribe = navigation.addListener('focus', loadHistoryOnFocus);
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [comicId, isAuthenticated, navigation]);
 
   const getStatusText = (status) => {
     if (status === 'completed') return t('story.status.completed');
@@ -570,6 +620,31 @@ export default function StoryDetail() {
     const locale = i18n.language === 'vi' ? 'vi-VN' : 'en-US';
     return date.toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
+
+  const normalizeReviews = useCallback((value) => {
+    if (Array.isArray(value)) return value;
+    if (Array.isArray(value?.reviews)) return value.reviews;
+    if (Array.isArray(value?.data)) return value.data;
+    if (Array.isArray(value?.data?.reviews)) return value.data.reviews;
+    return [];
+  }, []);
+
+  const refreshReviewsAndRating = useCallback(async () => {
+    const reviewsRes = await getComicReviews(comicId);
+    const nextReviews = normalizeReviews(reviewsRes);
+    setReviews(nextReviews);
+
+    const totalRating = nextReviews.reduce((sum, item) => sum + (Number(item?.rating) || 0), 0);
+    const nextRating = nextReviews.length > 0 ? totalRating / nextReviews.length : 0;
+
+    setComic((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        rating: nextRating,
+      };
+    });
+  }, [comicId, normalizeReviews]);
 
   const fetchComicDetails = useCallback(async () => {
     if (!comicId) {
@@ -586,7 +661,7 @@ export default function StoryDetail() {
         const comicData = comicRes?.comic || comicRes;
         setComic(comicData);
         setChapters(comicData?.chapters || []);
-        setReviews(reviewsRes || []);
+        setReviews(normalizeReviews(reviewsRes));
         setIsLiked((prev) =>
           typeof comicRes?.isLiked === 'boolean' ? comicRes.isLiked : prev
         );
@@ -605,7 +680,7 @@ export default function StoryDetail() {
       const comicData = comicRes?.comic || comicRes;
       setComic(comicData);
       setChapters(comicData?.chapters || []);
-      setReviews(reviewsRes || []);
+      setReviews(normalizeReviews(reviewsRes));
       setIsLiked((prev) =>
         typeof comicRes?.isLiked === 'boolean' ? comicRes.isLiked : prev
       );
@@ -614,7 +689,7 @@ export default function StoryDetail() {
     } finally {
       setLoading(false);
     }
-  }, [comicId]);
+  }, [comicId, normalizeReviews]);
 
   useEffect(() => {
     fetchComicDetails();
@@ -658,28 +733,6 @@ export default function StoryDetail() {
       cancelled = true;
     };
   }, [comicId, isAuthenticated]);
-
-
-  useEffect(() => {
-    const loadHistory = async () => {
-      try {
-        if (!isAuthenticated || !comicId) return;
-
-        const historyList = await getReadingHistory();
-
-        const history = historyList.find((item) => item?.comic?._id === comicId);
-
-        if (history?.chapter?._id) {
-          setLastChapterId(history.chapter._id);
-        }
-      } catch (error) {
-        console.log('Load history error:', error);
-      }
-    };
-
-    loadHistory();
-  }, [comicId, isAuthenticated]);
-
   const handleChapterPress = (chapterId) => {
     navigation.navigate('ChapterDetail', { chapterId, comicId });
   };
@@ -720,8 +773,7 @@ export default function StoryDetail() {
       } else {
         await createReview(comicId, reviewText, reviewRating);
       }
-      const reviewsRes = await getComicReviews(comicId);
-      setReviews(reviewsRes || []);
+      await refreshReviewsAndRating();
       setReviewText('');
       setReviewRating(0);
     } catch {
@@ -747,8 +799,7 @@ export default function StoryDetail() {
           onPress: async () => {
             try {
               await deleteReview(reviewId);
-              const reviewsRes = await getComicReviews(comicId);
-              setReviews(reviewsRes || []);
+              await refreshReviewsAndRating();
             } catch {
               // silent
             }
@@ -801,7 +852,11 @@ export default function StoryDetail() {
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 16 : 0}
+    >
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerButton} onPress={() => navigation.goBack()}>
@@ -812,7 +867,14 @@ export default function StoryDetail() {
         </Text>
       </View>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} bounces={false}>
+      <ScrollView
+        ref={contentScrollRef}
+        style={styles.scrollView}
+        contentContainerStyle={{ paddingBottom: activeTab !== 'chapter' ? 120 : 20 }}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Hero Section with Cover */}
         <View style={styles.heroSection}>
           <Image
@@ -952,13 +1014,26 @@ export default function StoryDetail() {
             </View>
             <View style={styles.chaptersSection}>
               <View style={styles.chaptersHeader}>
-                <Text style={styles.sectionTitle}>{t('story.chapter.list')}</Text>
-                <View style={styles.chapterCountBadge}>
-                  <Text style={styles.chapterCountText}>{chapters.length}</Text>
+                <View style={styles.chaptersHeaderLeft}>
+                  <Text style={styles.sectionTitle}>{t('story.chapter.list')}</Text>
+                  <View style={styles.chapterCountBadge}>
+                    <Text style={styles.chapterCountText}>{chapters.length}</Text>
+                  </View>
                 </View>
+                <TouchableOpacity
+                  style={styles.sortButton}
+                  activeOpacity={0.7}
+                  onPress={() =>
+                    setChapterSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))
+                  }
+                >
+                  <Text style={styles.sortButtonText}>
+                    {chapterSortOrder === 'desc' ? '↓' : '↑'}
+                  </Text>
+                </TouchableOpacity>
               </View>
               <View style={styles.chaptersList}>
-                {chapters.map((item) => renderChapter({ item }))}
+                {sortedChapters.map((item) => renderChapter({ item }))}
               </View>
             </View>
           </View>
@@ -992,6 +1067,11 @@ export default function StoryDetail() {
                   placeholderTextColor={colors.textMuted}
                   value={reviewText}
                   onChangeText={setReviewText}
+                  onFocus={() => {
+                    setTimeout(() => {
+                      contentScrollRef.current?.scrollToEnd({ animated: true });
+                    }, 180);
+                  }}
                   multiline
                 />
               </View>
@@ -1086,6 +1166,6 @@ export default function StoryDetail() {
           </TouchableOpacity>
         </View>
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 }

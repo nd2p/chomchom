@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../features/auth/hooks';
 import { authApi } from '../../features/auth/api';
@@ -180,6 +181,7 @@ function makeStyles(colors) {
 }
 
 export default function RegisterScreen({ onSwitchMode }) {
+  const navigation = useNavigation();
   const { login } = useAuth();
   const { colors } = useSettings();
   const { t } = useTranslation();
@@ -228,14 +230,21 @@ export default function RegisterScreen({ onSwitchMode }) {
 
   async function onSubmit(values) {
     try {
-      const res = await authApi.register({
+      await authApi.register({
         username: values.username.trim(),
         email: values.email.trim(),
         password: values.password,
       });
-      login(res.user, res.token);
+      Alert.alert(t('auth.register.verifyTitle'), t('auth.register.verifyMessage'));
+      navigation.navigate('VerifyOtp', {
+        email: values.email.trim(),
+        purpose: 'register',
+      });
     } catch (err) {
-      const message = err?.response?.data?.message ?? t('common.error');
+      const status = err?.response?.status;
+      const message =
+        err?.response?.data?.message ??
+        (status === 400 ? t('auth.errors.registerInvalid') : t('auth.errors.default'));
       Alert.alert(t('common.error'), message);
     }
   }
@@ -464,14 +473,21 @@ export default function RegisterScreen({ onSwitchMode }) {
             </TouchableOpacity>
 
             {/* Login link */}
-            {onSwitchMode && (
-              <View style={styles.footer}>
-                <Text style={styles.footerText}>{t('auth.register.hasAccount')} </Text>
-                <TouchableOpacity onPress={() => onSwitchMode('login')} disabled={busy}>
-                  <Text style={styles.footerLink}>{t('auth.register.loginLink')}</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>{t('auth.register.hasAccount')} </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  if (onSwitchMode) {
+                    onSwitchMode('login');
+                  } else {
+                    navigation.navigate('Login');
+                  }
+                }}
+                disabled={busy}
+              >
+                <Text style={styles.footerLink}>{t('auth.register.loginLink')}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

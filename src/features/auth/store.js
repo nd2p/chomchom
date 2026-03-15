@@ -1,5 +1,6 @@
 import React, { createContext, useEffect, useRef, useReducer } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { setupInterceptors } from '../../services/api/interceptors';
 
 const AUTH_TOKEN_KEY = '@auth/token';
@@ -29,6 +30,11 @@ function authReducer(state, action) {
         token: action.payload.token,
         isAuthenticated: true,
         isRestoring: false,
+      };
+    case 'UPDATE_USER':
+      return {
+        ...state,
+        user: action.payload,
       };
     case 'LOGOUT':
       return { ...initialState, isRestoring: false };
@@ -88,14 +94,30 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = async (user, token) => {
-    await Promise.all([
-      AsyncStorage.setItem(AUTH_TOKEN_KEY, token),
-      AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(user)),
-    ]);
-    dispatch({ type: 'LOGIN', payload: { user, token } });
+    try {
+      await Promise.all([
+        AsyncStorage.setItem(AUTH_TOKEN_KEY, token),
+        AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(user)),
+      ]);
+      dispatch({ type: 'LOGIN', payload: { user, token } });
+    } catch {
+      console.error('Failed to save auth data');
+    }
+
+  };
+
+  const updateCurrentUser = async (nextUser) => {
+    try {
+      await AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(nextUser));
+      dispatch({ type: 'UPDATE_USER', payload: nextUser });
+    } catch {
+      console.error('Failed to update auth user');
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ ...state, login, logout }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ ...state, login, logout, updateCurrentUser }}>
+      {children}
+    </AuthContext.Provider>
   );
 }

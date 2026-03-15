@@ -1,4 +1,4 @@
-﻿export default {
+export default {
   common: {
     loading: 'Đang tải...',
     error: 'Lỗi',
@@ -41,6 +41,32 @@
       passwordShort: 'Mật khẩu ít nhất 6 ký tự',
       confirmRequired: 'Vui lòng xác nhận mật khẩu',
       passwordMismatch: 'Mật khẩu không khớp',
+      verifyTitle: 'Xác minh email',
+      verifyMessage: 'Chúng tôi đã gửi mã OTP đến email của bạn. Vui lòng nhập mã để hoàn tất đăng ký.',
+    },
+    forgotPassword: {
+      title: 'Quên mật khẩu',
+      subtitle: 'Nhập email của bạn, chúng tôi sẽ gửi mã xác minh.',
+      submitButton: 'Gửi mã',
+      successTitle: 'Kiểm tra email',
+      successMessage: 'Mã xác minh đã được gửi.',
+    },
+    verifyOtp: {
+      title: 'Xác minh mã',
+      subtitle: 'Nhập mã xác minh để tiếp tục.',
+      emailHint: 'Mã đã gửi đến {{email}}',
+      codePlaceholder: 'Nhập mã',
+      codeInvalid: 'Mã xác minh không hợp lệ',
+      successTitle: 'Xác minh thành công',
+      registerSuccessMessage: 'Tài khoản đã được xác minh. Vui lòng đăng nhập.',
+      submitButton: 'Xác minh',
+    },
+    resetPassword: {
+      title: 'Đặt lại mật khẩu',
+      subtitle: 'Thiết lập mật khẩu mới cho {{email}}',
+      submitButton: 'Cập nhật mật khẩu',
+      successTitle: 'Đổi mật khẩu thành công',
+      successMessage: 'Bạn có thể đăng nhập bằng mật khẩu mới.',
     },
     logout: {
       title: 'Đăng xuất',
@@ -49,6 +75,13 @@
     },
     errors: {
       googleFailed: 'Đăng nhập Google thất bại. Vui lòng thử lại.',
+      invalidCredentials: 'Email hoặc mật khẩu không đúng.',
+      emailNotVerified: 'Tài khoản chưa xác minh. Vui lòng xác minh email trước.',
+      invalidOrExpiredCode: 'Mã xác minh không hợp lệ hoặc đã hết hạn.',
+      invalidToken: 'Token không hợp lệ hoặc đã hết hạn.',
+      userNotFound: 'Không tìm thấy người dùng.',
+      registerInvalid: 'Thông tin đăng ký không hợp lệ.',
+      default: 'Đã xảy ra lỗi. Vui lòng thử lại.',
     },
   },
   home: {
@@ -62,6 +95,7 @@
     loginRequiredSuffix: ' để xem tính năng này',
     noHistory: 'Chưa có lịch sử đọc',
     goBack: 'Quay lại',
+    searchResultsFor: 'Kết quả tìm kiếm cho "{{query}}"',
     filter: {
       base: 'Tất cả truyện',
       status: {
@@ -113,8 +147,41 @@
   profile: {
     stats: {
       reading: 'Đang đọc',
-      bookmarks: 'Bookmark',
+      bookmarks: 'Yêu thích',
       completed: 'Hoàn thành',
+    },
+    edit: {
+      title: 'Sửa hồ sơ',
+      profileSectionTitle: 'Thông tin cá nhân',
+      usernameLabel: 'Tên người dùng',
+      usernamePlaceholder: 'Nhập tên người dùng',
+      emailLabel: 'Email',
+      saveProfileButton: 'Lưu thông tin',
+      passwordSectionTitle: 'Đổi mật khẩu',
+      passwordWarning:
+        'Cảnh báo: Sau khi đổi mật khẩu, hãy đăng nhập lại trên các thiết bị khác để bảo mật tài khoản.',
+      currentPasswordLabel: 'Mật khẩu hiện tại',
+      currentPasswordPlaceholder: 'Nhập mật khẩu hiện tại',
+      newPasswordLabel: 'Mật khẩu mới',
+      newPasswordPlaceholder: 'Nhập mật khẩu mới',
+      confirmPasswordLabel: 'Xác nhận mật khẩu mới',
+      confirmPasswordPlaceholder: 'Nhập lại mật khẩu mới',
+      changePasswordButton: 'Đổi mật khẩu',
+      alerts: {
+        notice: 'Thông báo',
+        error: 'Lỗi',
+        success: 'Thành công',
+        usernameRequired: 'Tên người dùng không được để trống',
+        userNotFound: 'Không tìm thấy thông tin người dùng',
+        profileUpdated: 'Đã cập nhật thông tin cá nhân',
+        profileUpdateFailed: 'Cập nhật thất bại',
+        passwordInfoRequired: 'Vui lòng nhập đầy đủ thông tin mật khẩu',
+        passwordTooShort: 'Mật khẩu mới phải từ 6 ký tự trở lên',
+        passwordConfirmMismatch: 'Xác nhận mật khẩu mới không khớp',
+        passwordUpdated: 'Đã đổi mật khẩu thành công',
+        passwordUpdateFailed: 'Đổi mật khẩu thất bại',
+        passwordEndpointNotSupported: 'Backend chưa hỗ trợ endpoint đổi mật khẩu {{endpoint}}',
+      },
     },
     menu: {
       editProfile: 'Chỉnh sửa hồ sơ',
