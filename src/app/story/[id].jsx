@@ -16,7 +16,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import { useAuth } from '../../features/auth/hooks';
 import { getReadingHistory, likeComic, getLikedComics } from '../../features/bookmarks/api';
-import { getComicDetails, getComicReviews, createReview } from '../../services/api/comics';
+import { getComicDetails, getComicReviews, createReview, updateReview, deleteReview } from '../../services/api/comics';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
@@ -423,8 +423,9 @@ function makeStyles(colors) {
       marginBottom: 16,
       gap: 8,
     },
-    writeReviewContent: {
+    writeReviewTop: {
       flex: 1,
+      gap: 8,
     },
     starRating: {
       flexDirection: 'row',
@@ -520,7 +521,7 @@ function makeStyles(colors) {
 }
 
 export default function StoryDetail() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user: currentUser } = useAuth();
   const navigation = useNavigation();
   const route = useRoute();
   const { t, i18n } = useTranslation();
@@ -539,6 +540,7 @@ export default function StoryDetail() {
   const [reviews, setReviews] = useState([]);
   const [reviewText, setReviewText] = useState('');
   const [reviewRating, setReviewRating] = useState(0);
+  const [editingReviewId, setEditingReviewId] = useState(null);
 
   const lastChapter = useMemo(() => {
     if (!lastChapterId || chapters.length === 0) return null;
@@ -574,6 +576,27 @@ export default function StoryDetail() {
       setLoading(false);
       return;
     }
+
+    const fetchComicDetails = async () => {
+      try {
+        const [comicRes, reviewsRes] = await Promise.all([
+          getComicDetails(comicId),
+          getComicReviews(comicId),
+        ]);
+        const comicData = comicRes?.comic || comicRes;
+        setComic(comicData);
+        setChapters(comicData?.chapters || []);
+        setReviews(reviewsRes || []);
+        setIsLiked((prev) =>
+          typeof comicRes?.isLiked === 'boolean' ? comicRes.isLiked : prev
+        );
+      } catch (error) {
+        console.log('Failed to fetch comic details', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchComicDetails();
     try {
       const [comicRes, reviewsRes] = await Promise.all([
         getComicDetails(comicId),
@@ -582,7 +605,7 @@ export default function StoryDetail() {
       const comicData = comicRes?.comic || comicRes;
       setComic(comicData);
       setChapters(comicData?.chapters || []);
-      setReviews(reviewsRes?.comments || []);
+      setReviews(reviewsRes || []);
       setIsLiked((prev) =>
         typeof comicRes?.isLiked === 'boolean' ? comicRes.isLiked : prev
       );
@@ -685,16 +708,54 @@ export default function StoryDetail() {
   };
 
   const handleSubmitReview = async () => {
+    if (!isAuthenticated) {
+      Alert.alert('Yêu cầu đăng nhập', 'Bạn cần đăng nhập để viết đánh giá!');
+      return;
+    }
     if (!reviewText.trim() || reviewRating === 0) return;
     try {
-      await createReview(comicId, reviewText, reviewRating);
+      if (editingReviewId) {
+        await updateReview(editingReviewId, reviewText, reviewRating);
+        setEditingReviewId(null);
+      } else {
+        await createReview(comicId, reviewText, reviewRating);
+      }
       const reviewsRes = await getComicReviews(comicId);
-      setReviews(reviewsRes?.comments || []);
+      setReviews(reviewsRes || []);
       setReviewText('');
       setReviewRating(0);
     } catch {
       // silent
     }
+  };
+
+  const handleEditReview = (review) => {
+    setReviewText(review.content);
+    setReviewRating(review.rating || 0);
+    setEditingReviewId(review._id || review.id);
+  };
+
+  const handleDeleteReview = (reviewId) => {
+    Alert.alert(
+      'Xóa đánh giá',
+      'Bạn có chắc muốn xóa đánh giá này?',
+      [
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Xóa',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteReview(reviewId);
+              const reviewsRes = await getComicReviews(comicId);
+              setReviews(reviewsRes || []);
+            } catch {
+              // silent
+            }
+          },
+        },
+      ]
+    );
   };
 
   const readButtonLabel = isAuthenticated
@@ -913,7 +974,7 @@ export default function StoryDetail() {
               </View>
             </View>
             <View style={styles.writeReview}>
-              <View style={styles.writeReviewContent}>
+              <View style={styles.writeReviewTop}>
                 <View style={styles.starRating}>
                   {[1, 2, 3, 4, 5].map((star) => (
                     <TouchableOpacity key={star} onPress={() => setReviewRating(star)}>
@@ -934,19 +995,54 @@ export default function StoryDetail() {
                   multiline
                 />
               </View>
-              <TouchableOpacity style={styles.sendButton} onPress={handleSubmitReview}>
-                <Text style={styles.sendButtonText}>{t('story.detail.send')}</Text>
-              </TouchableOpacity>
+              {!editingReviewId && (
+                <TouchableOpacity style={styles.sendButton} onPress={handleSubmitReview}>
+                  <Text style={styles.sendButtonText}>{t('story.detail.send')}</Text>
+                </TouchableOpacity>
+              )}
             </View>
+            {editingReviewId && (
+              <View style={{ flexDirection: 'row', gap: 12, justifyContent: 'flex-end', marginBottom: 16 }}>
+                <TouchableOpacity style={styles.sendButton} onPress={handleSubmitReview}>
+                  <Text style={styles.sendButtonText}>{t('Cập nhật')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.sendButton, { backgroundColor: colors.border }]}
+                  onPress={() => {
+                    setEditingReviewId(null);
+                    setReviewText('');
+                    setReviewRating(0);
+                  }}
+                >
+                  <Text style={[styles.sendButtonText, { color: colors.text }]}>
+                    {t('common.cancel')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
             {reviews.length > 0 ? (
               <View style={styles.reviewsList}>
-                {reviews.map((review) => (
+                {reviews.map((review) => {
+                  const reviewUserId = review.user?._id || review.user;
+                  const isOwnReview = isAuthenticated && currentUser && reviewUserId && String(reviewUserId) === String(currentUser._id);
+                  return (
                   <View key={review.id || review._id} style={styles.reviewItem}>
                     <Image source={{ uri: review.user?.avatar }} style={styles.reviewAvatar} />
                     <View style={styles.reviewContent}>
                       <View style={styles.reviewHeaderRow}>
-                        <Text style={styles.reviewUser}>{review.user?.name}</Text>
-                        <Text style={styles.reviewDate}>{formatDate(review.createdAt)}</Text>
+                        <Text style={styles.reviewUser}>{review.user?.username}</Text>
+                        {isOwnReview ? (
+                          <View style={{ flexDirection: 'row', gap: 12 }}>
+                            <TouchableOpacity onPress={() => handleEditReview(review)}>
+                              <Text style={{ color: colors.primary, fontSize: 13 }}>Sửa</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => handleDeleteReview(review._id || review.id)}>
+                              <Text style={{ color: '#ef4444', fontSize: 13 }}>Xóa</Text>
+                            </TouchableOpacity>
+                          </View>
+                        ) : (
+                          <Text style={styles.reviewDate}>{formatDate(review.createdAt)}</Text>
+                        )}
                       </View>
                       <View style={styles.reviewStars}>
                         {[1, 2, 3, 4, 5].map((star) => (
@@ -964,7 +1060,7 @@ export default function StoryDetail() {
                       <Text style={styles.reviewText}>{review.content}</Text>
                     </View>
                   </View>
-                ))}
+                )})}
               </View>
             ) : (
               <Text style={styles.reviewPlaceholder}>{t('story.detail.noReviews')}</Text>

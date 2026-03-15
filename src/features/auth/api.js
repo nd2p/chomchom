@@ -15,6 +15,7 @@ export const authApi = {
     });
 
     const user = {
+      _id: data._id,
       username: data.username,
       email: data.email,
       role: data.role,
@@ -42,7 +43,7 @@ export const authApi = {
   loginWithGoogle: async () => {
     await delay(1500);
     return {
-      user: { id: '3', name: 'Google User', email: 'user@gmail.com', provider: 'google' },
+      user: { _id: '3', username: 'Google User', email: 'user@gmail.com', provider: 'google' },
       token: 'mock-token-google',
     };
   },
