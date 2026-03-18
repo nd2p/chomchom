@@ -66,7 +66,7 @@ export function ReaderChatbot({ visible, onClose, comicId, currentChapterNumber 
   const samples = t('story.chatbot.samples', { returnObjects: true });
 
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <TouchableOpacity style={styles.backdrop} onPress={onClose} activeOpacity={1} />
         <KeyboardAvoidingView
