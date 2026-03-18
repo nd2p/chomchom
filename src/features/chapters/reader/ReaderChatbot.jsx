@@ -29,7 +29,6 @@ export function ReaderChatbot({ visible, onClose, comicId, currentChapterNumber 
     navigation.navigate('Profile', { goBack: true });
   };
 
-
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -66,7 +65,6 @@ export function ReaderChatbot({ visible, onClose, comicId, currentChapterNumber 
   };
   const samples = t('story.chatbot.samples', { returnObjects: true });
 
-
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
@@ -87,10 +85,7 @@ export function ReaderChatbot({ visible, onClose, comicId, currentChapterNumber 
           <ScrollView
             ref={scrollRef}
             style={styles.body}
-            contentContainerStyle={[
-              styles.bodyContent,
-              !isAuthenticated
-            ]}
+            contentContainerStyle={[styles.bodyContent, !isAuthenticated]}
             keyboardShouldPersistTaps="handled"
           >
             {!isAuthenticated && (

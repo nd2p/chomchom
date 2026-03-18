@@ -48,7 +48,7 @@ const StoryCard = ({
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <Image source={{ uri: cover }} style={[styles.image, imageStyle]} resizeMode="stretch" />
+      <Image source={{ uri: cover }} style={[styles.image, imageStyle]} resizeMode="cover" />
       <View style={styles.content}>
         <Text style={styles.title} numberOfLines={2}>
           {title}
@@ -73,7 +73,7 @@ function makeVerticalStyles(colors) {
     },
     image: {
       width: '100%',
-      height: 150,
+      aspectRatio: 2 / 3,
       borderRadius: 8,
       backgroundColor: colors.background,
     },

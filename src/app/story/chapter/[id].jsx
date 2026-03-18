@@ -22,6 +22,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { updateReadingHistory } from '../../../features/bookmarks/api';
 import { useAuth } from '../../../features/auth/hooks';
 import { ReaderChatbot } from '../../../features/chapters/reader/ReaderChatbot';
+import { MaterialCommunityIcons, Octicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 const ITEM_HEIGHT = 64;
@@ -36,7 +37,7 @@ function makeStyles(colors) {
       alignItems: 'center',
     },
     loadingText: { color: colors.textSecondary, marginTop: 12, fontSize: 14 },
-    contentArea: { flex: 1 },
+    contentArea: { flex: 1, paddingTop: 60 },
     pageContainer: {
       width: width,
       minHeight: width * 1.5,
@@ -146,7 +147,7 @@ function makeStyles(colors) {
       width: 48,
       height: 48,
       borderRadius: 24,
-      backgroundColor: colors.primary,
+      backgroundColor: colors.secondary,
       justifyContent: 'center',
       alignItems: 'center',
       zIndex: 20,
@@ -156,7 +157,7 @@ function makeStyles(colors) {
       shadowRadius: 4,
       elevation: 6,
     },
-    chatbotFabText: { fontSize: 22 },
+    chatbotFabText: { fontSize: 22, color: colors.primary, fontWeight: 'bold' },
   });
 }
 
@@ -263,7 +264,17 @@ export default function ChapterDetail() {
     const currentY = event.nativeEvent.contentOffset.y;
     const diff = currentY - lastScrollY.current;
 
-    if (Math.abs(diff) < 5) return;
+    // If at the very top, always show the UI (header, bottom, FAB)
+    if (currentY <= 0) {
+      if (!uiVisibleRef.current) animateUI(true);
+      lastScrollY.current = currentY;
+      return;
+    }
+
+    if (Math.abs(diff) < 5) {
+      lastScrollY.current = currentY;
+      return;
+    }
 
     const shouldShow = diff < 0;
 
@@ -396,9 +407,24 @@ export default function ChapterDetail() {
       </Animated.View>
 
       {/* CHATBOT FAB */}
-      <TouchableOpacity style={styles.chatbotFab} onPress={() => setChatbotVisible(true)}>
-        <Text style={styles.chatbotFabText}>🤖</Text>
-      </TouchableOpacity>
+      <Animated.View
+        pointerEvents={uiVisible ? 'auto' : 'none'}
+        style={[
+          styles.chatbotFab,
+          {
+            opacity: uiAnim,
+            transform: [
+              {
+                translateY: uiAnim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] }),
+              },
+            ],
+          },
+        ]}
+      >
+        <TouchableOpacity onPress={() => setChatbotVisible(true)} activeOpacity={0.8}>
+          <Octicons name="hubot" size={26} color={colors.primary} />
+        </TouchableOpacity>
+      </Animated.View>
 
       {/* CHATBOT MODAL */}
       <ReaderChatbot

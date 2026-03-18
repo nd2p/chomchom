@@ -185,7 +185,7 @@ export default function Home() {
 
       try {
         const recommendRes = await getRecommendedComicsByHistory(comicIds);
-        
+
         const recommended = normalizeComics(recommendRes?.recommendations);
         setRecommendedComics(recommended);
       } catch (recommendError) {
@@ -213,17 +213,17 @@ export default function Home() {
 
   const fetchPopular = useCallback(async () => {
     try {
-      const res = await getComics({ sort: 'likesDesc', page: 1 });
+      const res = await getComics({ sort: 'viewsDesc', page: 1 });
       const comics = res?.comics;
       const normalized = Array.isArray(comics)
         ? comics.map((comic) => ({
-          id: comic?._id,
-          title: comic?.title || naText,
-          author: comic?.author || naText,
-          cover: comic?.coverImage,
-          chapters: comic?.totalChapters,
-          views: comic?.views,
-        }))
+            id: comic?._id,
+            title: comic?.title || naText,
+            author: comic?.author || naText,
+            cover: comic?.coverImage,
+            chapters: comic?.totalChapters,
+            views: comic?.views,
+          }))
         : [];
       setPopularComics(normalized);
     } catch (error) {
@@ -250,15 +250,15 @@ export default function Home() {
               : [];
       const normalizedHistories = Array.isArray(histories)
         ? histories
-          .filter((history) => history?.comic?._id || history?.comic?.id)
-          .map((history) => ({
-            id: history?.comic?._id ?? history?.comic?.id,
-            title: history?.comic?.title ?? naText,
-            author: history?.comic?.author ?? naText,
-            cover: history?.comic?.coverImage ?? history?.comic?.cover,
-            chapters: history?.comic?.totalChapters,
-            views: history?.comic?.views,
-          }))
+            .filter((history) => history?.comic?._id || history?.comic?.id)
+            .map((history) => ({
+              id: history?.comic?._id ?? history?.comic?.id,
+              title: history?.comic?.title ?? naText,
+              author: history?.comic?.author ?? naText,
+              cover: history?.comic?.coverImage ?? history?.comic?.cover,
+              chapters: history?.comic?.totalChapters,
+              views: history?.comic?.views,
+            }))
         : [];
 
       setRecentlyRead(normalizedHistories);
@@ -327,6 +327,10 @@ export default function Home() {
 
   const handleApplyFilters = async () => {
     setShowGenreModal(false);
+    // If user was searching, clear the search so filtered results become visible
+    if (searchQuery.trim()) {
+      setSearchQuery('');
+    }
     try {
       const params = {
         page: 1,
@@ -438,9 +442,7 @@ export default function Home() {
       .filter((g) => selectedGenres.includes(g._id))
       .map((g) => g.name)
       .join(', ');
-    const genrePart = genreNames
-      ? t('home.filter.genrePart', { genres: genreNames })
-      : '';
+    const genrePart = genreNames ? t('home.filter.genrePart', { genres: genreNames }) : '';
     const sortPart = t('home.filter.sortPart', {
       sort: sortMap[selectedSort] || t('home.filter.sort.latest'),
     });
@@ -465,9 +467,7 @@ export default function Home() {
     navigation.navigate('StoryDetail', { id: storyId });
   };
 
-  const PopularHeader = () => (
-    <Text style={styles.sectionTitle}>{t('home.popular')}</Text>
-  );
+  const PopularHeader = () => <Text style={styles.sectionTitle}>{t('home.popular')}</Text>;
 
   const ListHeader = () => (
     <>
@@ -528,7 +528,7 @@ export default function Home() {
           <Ionicons
             name="list"
             size={20}
-            color={(genrePressed || showGenreModal) ? '#fff' : colors.primary}
+            color={genrePressed || showGenreModal ? '#fff' : colors.primary}
           />
         </TouchableOpacity>
       </View>
@@ -548,9 +548,11 @@ export default function Home() {
       />
 
       <MainComicList
-        comics={isSearchActive ? searchResults : (isFiltered ? filteredComics : popularComics)}
+        comics={isSearchActive ? searchResults : isFiltered ? filteredComics : popularComics}
         isFiltered={isFiltered || isSearchActive}
-        filterTitle={isSearchActive ? t('home.searchResultsFor', { query: searchQuery }) : getFilterTitle()}
+        filterTitle={
+          isSearchActive ? t('home.searchResultsFor', { query: searchQuery }) : getFilterTitle()
+        }
         onClearFilters={isSearchActive ? () => setSearchQuery('') : handleClearFilters}
         onStoryPress={handleStoryPress}
         ListHeaderComponent={isSearchActive ? null : <ListHeader />}
@@ -562,11 +564,7 @@ export default function Home() {
       />
 
       {showScrollTop && (
-        <TouchableOpacity
-          style={styles.scrollTopBtn}
-          onPress={scrollToTop}
-          activeOpacity={0.8}
-        >
+        <TouchableOpacity style={styles.scrollTopBtn} onPress={scrollToTop} activeOpacity={0.8}>
           <Ionicons name="arrow-up" size={24} color="#ffffff" />
         </TouchableOpacity>
       )}
