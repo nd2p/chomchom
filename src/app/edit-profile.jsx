@@ -25,6 +25,7 @@ function makeStyles(colors) {
     container: {
       flex: 1,
       backgroundColor: colors.background,
+      marginTop: -28,
     },
     header: {
       flexDirection: 'row',
@@ -194,33 +195,34 @@ export default function EditProfileScreen() {
       await updateCurrentUser(nextUser);
       Alert.alert(t('profile.edit.alerts.success'), t('profile.edit.alerts.profileUpdated'));
     } catch (error) {
-      const message = error?.response?.data?.message || t('profile.edit.alerts.profileUpdateFailed');
+      const message =
+        error?.response?.data?.message || t('profile.edit.alerts.profileUpdateFailed');
       Alert.alert(t('profile.edit.alerts.error'), message);
     } finally {
       setSavingProfile(false);
     }
   };
 
-    async function handleLogout() {
-      Alert.alert(t('auth.logout.title'), t('auth.logout.confirm'), [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('auth.logout.button'),
-          style: 'destructive',
-          onPress: async () => {
-            setIsLoggingOut(true);
-            try {
-              await authApi.logout();
-            } catch {
-              // Server-side logout failed — still clear local credentials
-            } finally {
-              logout();
-              setIsLoggingOut(false);
-            }
-          },
+  async function handleLogout() {
+    Alert.alert(t('auth.logout.title'), t('auth.logout.confirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('auth.logout.button'),
+        style: 'destructive',
+        onPress: async () => {
+          setIsLoggingOut(true);
+          try {
+            await authApi.logout();
+          } catch {
+            // Server-side logout failed — still clear local credentials
+          } finally {
+            logout();
+            setIsLoggingOut(false);
+          }
         },
-      ]);
-    }
+      },
+    ]);
+  }
 
   const handleChangePassword = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
@@ -234,7 +236,10 @@ export default function EditProfileScreen() {
     }
 
     if (newPassword !== confirmPassword) {
-      Alert.alert(t('profile.edit.alerts.notice'), t('profile.edit.alerts.passwordConfirmMismatch'));
+      Alert.alert(
+        t('profile.edit.alerts.notice'),
+        t('profile.edit.alerts.passwordConfirmMismatch')
+      );
       return;
     }
 
@@ -247,24 +252,20 @@ export default function EditProfileScreen() {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      Alert.alert(
-        t('profile.edit.alerts.success'),
-        t('profile.edit.alerts.passwordUpdated'),
-        [
-          {
-            text: 'OK',
-            onPress: async () => {
-              try {
-                await authApi.logout();
-              } catch {
-                // server-side logout failed — local logout still runs
-              }
-              logout();
-              navigation.goBack();
-            },
+      Alert.alert(t('profile.edit.alerts.success'), t('profile.edit.alerts.passwordUpdated'), [
+        {
+          text: 'OK',
+          onPress: async () => {
+            try {
+              await authApi.logout();
+            } catch {
+              // server-side logout failed — local logout still runs
+            }
+            logout();
+            navigation.goBack();
           },
-        ]
-      );
+        },
+      ]);
     } catch (error) {
       const status = error?.response?.status;
       const message =
@@ -295,134 +296,132 @@ export default function EditProfileScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}
       >
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('profile.edit.title')}</Text>
-        <View style={styles.backBtn} />
-      </View>
-
-      <ScrollView
-        ref={scrollRef}
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>{t('profile.edit.profileSectionTitle')}</Text>
-
-          <View>
-            <Text style={styles.label}>{t('profile.edit.usernameLabel')}</Text>
-            <TextInput
-              value={username}
-              onChangeText={setUsername}
-              placeholder={t('profile.edit.usernamePlaceholder')}
-              placeholderTextColor={colors.textMuted}
-              style={styles.input}
-              autoCapitalize="none"
-              onFocus={() => {
-                setTimeout(() => {
-                  scrollRef.current?.scrollTo({ y: 0, animated: true });
-                }, 120);
-              }}
-            />
-          </View>
-
-          <View>
-            <Text style={styles.label}>{t('profile.edit.emailLabel')}</Text>
-            <TextInput
-              value={email}
-              editable={false}
-              style={[styles.input, styles.inputDisabled]}
-              placeholderTextColor={colors.textMuted}
-            />
-          </View>
-
-          <TouchableOpacity
-            style={[styles.actionBtn, savingProfile && { opacity: 0.7 }]}
-            onPress={handleSaveProfile}
-            disabled={savingProfile}
-          >
-            {savingProfile ? (
-              <ActivityIndicator color={colors.white} />
-            ) : (
-              <Text style={styles.actionText}>{t('profile.edit.saveProfileButton')}</Text>
-            )}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
+          <Text style={styles.headerTitle}>{t('profile.edit.title')}</Text>
+          <View style={styles.backBtn} />
         </View>
 
-        <View style={[styles.card, styles.warningCard]}>
-          <Text style={[styles.sectionTitle, styles.warningTitle]}>
-            {t('profile.edit.passwordSectionTitle')}
-          </Text>
-          <Text style={styles.warningText}>
-            {t('profile.edit.passwordWarning')}
-          </Text>
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>{t('profile.edit.profileSectionTitle')}</Text>
 
-          <View>
-            <Text style={styles.label}>{t('profile.edit.currentPasswordLabel')}</Text>
-            <TextInput
-              value={currentPassword}
-              onChangeText={setCurrentPassword}
-              placeholder={t('profile.edit.currentPasswordPlaceholder')}
-              placeholderTextColor={colors.textMuted}
-              style={styles.input}
-              secureTextEntry
-              onFocus={() => {
-                setTimeout(() => {
-                  scrollRef.current?.scrollToEnd({ animated: true });
-                }, 120);
-              }}
-            />
+            <View>
+              <Text style={styles.label}>{t('profile.edit.usernameLabel')}</Text>
+              <TextInput
+                value={username}
+                onChangeText={setUsername}
+                placeholder={t('profile.edit.usernamePlaceholder')}
+                placeholderTextColor={colors.textMuted}
+                style={styles.input}
+                autoCapitalize="none"
+                onFocus={() => {
+                  setTimeout(() => {
+                    scrollRef.current?.scrollTo({ y: 0, animated: true });
+                  }, 120);
+                }}
+              />
+            </View>
+
+            <View>
+              <Text style={styles.label}>{t('profile.edit.emailLabel')}</Text>
+              <TextInput
+                value={email}
+                editable={false}
+                style={[styles.input, styles.inputDisabled]}
+                placeholderTextColor={colors.textMuted}
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.actionBtn, savingProfile && { opacity: 0.7 }]}
+              onPress={handleSaveProfile}
+              disabled={savingProfile}
+            >
+              {savingProfile ? (
+                <ActivityIndicator color={colors.white} />
+              ) : (
+                <Text style={styles.actionText}>{t('profile.edit.saveProfileButton')}</Text>
+              )}
+            </TouchableOpacity>
           </View>
 
-          <View>
-            <Text style={styles.label}>{t('profile.edit.newPasswordLabel')}</Text>
-            <TextInput
-              value={newPassword}
-              onChangeText={setNewPassword}
-              placeholder={t('profile.edit.newPasswordPlaceholder')}
-              placeholderTextColor={colors.textMuted}
-              style={styles.input}
-              secureTextEntry
-              onFocus={() => {
-                setTimeout(() => {
-                  scrollRef.current?.scrollToEnd({ animated: true });
-                }, 120);
-              }}
-            />
-          </View>
+          <View style={[styles.card, styles.warningCard]}>
+            <Text style={[styles.sectionTitle, styles.warningTitle]}>
+              {t('profile.edit.passwordSectionTitle')}
+            </Text>
+            <Text style={styles.warningText}>{t('profile.edit.passwordWarning')}</Text>
 
-          <View>
-            <Text style={styles.label}>{t('profile.edit.confirmPasswordLabel')}</Text>
-            <TextInput
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              placeholder={t('profile.edit.confirmPasswordPlaceholder')}
-              placeholderTextColor={colors.textMuted}
-              style={styles.input}
-              secureTextEntry
-              onFocus={() => {
-                setTimeout(() => {
-                  scrollRef.current?.scrollToEnd({ animated: true });
-                }, 120);
-              }}
-            />
-          </View>
+            <View>
+              <Text style={styles.label}>{t('profile.edit.currentPasswordLabel')}</Text>
+              <TextInput
+                value={currentPassword}
+                onChangeText={setCurrentPassword}
+                placeholder={t('profile.edit.currentPasswordPlaceholder')}
+                placeholderTextColor={colors.textMuted}
+                style={styles.input}
+                secureTextEntry
+                onFocus={() => {
+                  setTimeout(() => {
+                    scrollRef.current?.scrollToEnd({ animated: true });
+                  }, 120);
+                }}
+              />
+            </View>
 
-          <TouchableOpacity
-            style={[styles.actionBtn, styles.actionBtnDanger, savingPassword && { opacity: 0.7 }]}
-            onPress={handleChangePassword}
-            disabled={savingPassword}
-          >
-            {savingPassword ? (
-              <ActivityIndicator color={colors.white} />
-            ) : (
-              <Text style={styles.actionText}>{t('profile.edit.changePasswordButton')}</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+            <View>
+              <Text style={styles.label}>{t('profile.edit.newPasswordLabel')}</Text>
+              <TextInput
+                value={newPassword}
+                onChangeText={setNewPassword}
+                placeholder={t('profile.edit.newPasswordPlaceholder')}
+                placeholderTextColor={colors.textMuted}
+                style={styles.input}
+                secureTextEntry
+                onFocus={() => {
+                  setTimeout(() => {
+                    scrollRef.current?.scrollToEnd({ animated: true });
+                  }, 120);
+                }}
+              />
+            </View>
+
+            <View>
+              <Text style={styles.label}>{t('profile.edit.confirmPasswordLabel')}</Text>
+              <TextInput
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder={t('profile.edit.confirmPasswordPlaceholder')}
+                placeholderTextColor={colors.textMuted}
+                style={styles.input}
+                secureTextEntry
+                onFocus={() => {
+                  setTimeout(() => {
+                    scrollRef.current?.scrollToEnd({ animated: true });
+                  }, 120);
+                }}
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.actionBtn, styles.actionBtnDanger, savingPassword && { opacity: 0.7 }]}
+              onPress={handleChangePassword}
+              disabled={savingPassword}
+            >
+              {savingPassword ? (
+                <ActivityIndicator color={colors.white} />
+              ) : (
+                <Text style={styles.actionText}>{t('profile.edit.changePasswordButton')}</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
