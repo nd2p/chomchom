@@ -117,6 +117,7 @@ export default function Home() {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const isSearchActive = searchQuery.trim() !== '';
 
@@ -145,7 +146,7 @@ export default function Home() {
   );
 
   const fetchDefaultRecommended = useCallback(async () => {
-    const res = await getComics({ sort: 'viewsDesc', page: 1 });
+    const res = await getComics({ sort: 'likesDesc', page: 1 });
     return normalizeComics(res?.comics);
   }, [normalizeComics]);
 
@@ -273,21 +274,17 @@ export default function Home() {
     fetchReadingHistory();
   }, [fetchRecommended, fetchPopular, fetchReadingHistory]);
 
-  useEffect(() => {
-    if (!debouncedSearchQuery.trim()) {
-      setSearchResults([]);
-      setIsSearching(false);
-      return;
-    }
+  const performSearch = useCallback(
+    async (query, options = {}) => {
+      if (!query.trim()) {
+        setSearchResults([]);
+        setIsSearching(false);
+        return;
+      }
 
-    const controller = new AbortController();
-    const triggerSearch = async () => {
       setIsSearching(true);
       try {
-        const res = await getComics(
-          { search: debouncedSearchQuery, limit: 5 },
-          { signal: controller.signal }
-        );
+        const res = await getComics({ search: query, limit: 5 }, options);
         const comics = res?.comics;
         const normalized = Array.isArray(comics)
           ? comics.map((comic) => ({
@@ -307,14 +304,17 @@ export default function Home() {
       } finally {
         setIsSearching(false);
       }
-    };
+    },
+    [naText]
+  );
 
-    triggerSearch();
-
+  useEffect(() => {
+    const controller = new AbortController();
+    performSearch(debouncedSearchQuery, { signal: controller.signal });
     return () => {
       controller.abort();
     };
-  }, [debouncedSearchQuery, naText]);
+  }, [debouncedSearchQuery, performSearch]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
@@ -325,15 +325,10 @@ export default function Home() {
     return unsubscribe;
   }, [navigation, fetchRecommended, fetchPopular, fetchReadingHistory]);
 
-  const handleApplyFilters = async () => {
-    setShowGenreModal(false);
-    // If user was searching, clear the search so filtered results become visible
-    if (searchQuery.trim()) {
-      setSearchQuery('');
-    }
-    try {
+  const fetchFilteredComics = useCallback(
+    async ({ page = 1 } = {}) => {
       const params = {
-        page: 1,
+        page,
         sort: selectedSort,
       };
 
@@ -357,6 +352,20 @@ export default function Home() {
             views: comic?.views,
           }))
         : [];
+
+      return normalized;
+    },
+    [selectedGenres, selectedSort, selectedStatus, naText]
+  );
+
+  const handleApplyFilters = async () => {
+    setShowGenreModal(false);
+    // If user was searching, clear the search so filtered results become visible
+    if (searchQuery.trim()) {
+      setSearchQuery('');
+    }
+    try {
+      const normalized = await fetchFilteredComics({ page: 1 });
       setFilteredComics(normalized);
       setIsFiltered(true);
       setFilterPage(1);
@@ -383,31 +392,7 @@ export default function Home() {
     setIsLoadingMoreFilters(true);
     try {
       const nextPage = filterPage + 1;
-      const params = {
-        page: nextPage,
-        sort: selectedSort,
-      };
-
-      if (selectedStatus !== 'all') {
-        params.status = selectedStatus;
-      }
-
-      if (selectedGenres.length > 0) {
-        params.genres = selectedGenres.join(',');
-      }
-
-      const res = await getComics(params);
-      const comics = res?.comics;
-      const normalized = Array.isArray(comics)
-        ? comics.map((comic) => ({
-            id: comic?._id,
-            title: comic?.title || naText,
-            author: comic?.author || naText,
-            cover: comic?.coverImage,
-            chapters: comic?.totalChapters,
-            views: comic?.views,
-          }))
-        : [];
+      const normalized = await fetchFilteredComics({ page: nextPage });
 
       if (normalized.length > 0) {
         setFilteredComics((prev) => {
@@ -425,6 +410,43 @@ export default function Home() {
       setIsLoadingMoreFilters(false);
     }
   };
+
+  const handleRefresh = useCallback(async () => {
+    if (isRefreshing) return;
+
+    setIsRefreshing(true);
+    try {
+      if (isSearchActive) {
+        await performSearch(searchQuery);
+        return;
+      }
+
+      if (isFiltered) {
+        const normalized = await fetchFilteredComics({ page: 1 });
+        setFilteredComics(normalized);
+        setFilterPage(1);
+        setHasMoreFilters(normalized.length > 0);
+        setIsLoadingMoreFilters(false);
+        return;
+      }
+
+      await Promise.all([fetchRecommended(), fetchPopular(), fetchReadingHistory()]);
+    } catch (error) {
+      console.log('Failed to refresh home list', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [
+    fetchFilteredComics,
+    fetchPopular,
+    fetchReadingHistory,
+    fetchRecommended,
+    isFiltered,
+    isRefreshing,
+    isSearchActive,
+    performSearch,
+    searchQuery,
+  ]);
 
   const getFilterTitle = () => {
     const statusMap = {
@@ -561,6 +583,8 @@ export default function Home() {
         isLoadingMore={isSearchActive ? isSearching : isLoadingMoreFilters}
         onScroll={handleScroll}
         flatListRef={flatListRef}
+        refreshing={isRefreshing}
+        onRefresh={handleRefresh}
       />
 
       {showScrollTop && (

@@ -58,6 +58,8 @@ const MainComicList = ({
   isLoadingMore,
   onScroll,
   flatListRef,
+  refreshing,
+  onRefresh,
 }) => {
   const { colors } = useSettings();
   const { t } = useTranslation();
@@ -103,6 +105,8 @@ const MainComicList = ({
           </View>
         ) : null
       }
+      refreshing={refreshing}
+      onRefresh={onRefresh}
       onEndReached={onEndReached}
       onEndReachedThreshold={0.5}
       stickyHeaderIndices={isFiltered ? [0] : undefined}
