@@ -447,14 +447,14 @@ export default function RegisterScreen({ onSwitchMode }) {
             </TouchableOpacity>
 
             {/* Divider */}
-            <View style={styles.divider}>
+            {/* <View style={styles.divider}>
               <View style={styles.dividerLine} />
               <Text style={styles.dividerText}>{t('common.or')}</Text>
               <View style={styles.dividerLine} />
-            </View>
+            </View> */}
 
             {/* Google button */}
-            <TouchableOpacity
+            {/* <TouchableOpacity
               style={[styles.googleButton, busy && styles.buttonDisabled]}
               onPress={handleGoogleLogin}
               disabled={busy}
@@ -470,7 +470,7 @@ export default function RegisterScreen({ onSwitchMode }) {
                   <Text style={styles.googleButtonText}>{t('auth.login.googleButton')}</Text>
                 </>
               )}
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
             {/* Login link */}
             <View style={styles.footer}>
